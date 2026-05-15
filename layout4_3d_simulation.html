@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Layout 4 "Đấu Trường"</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 320px;
+            z-index: 100;
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 8px;
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+
+    <div class="ui-overlay">
+        <h1>🏟️ Layout 4: Đấu Trường (3D)</h1>
+        <p>Mô phỏng 3D dây chuyền sản xuất Fuser với 15 trạm bố trí hình tròn.</p>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6366f1;"></div>
+                <span>Trạm làm việc (Station)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e;"></div>
+                <span>Đường AGV (Vòng ngoài)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3b82f6;"></div>
+                <span>Đường CTU (Vòng trong)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fbbf24;"></div>
+                <span>Kho hàng (Warehouse)</span>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            <strong>Điều khiển:</strong><br>
+            🖱️ Kéo chuột: Xoay camera<br>
+            🔄 Cuộn chuột: Zoom<br>
+            ➡️ Chuột phải + kéo: Di chuyển
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        AGV: 0° | CTU: 0°
+    </div>
+
+    <script>
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 50, 150);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(40, 35, 40);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2.1;
+        controls.minDistance = 15;
+        controls.maxDistance = 100;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(30, 50, 30);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 150;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        scene.add(directionalLight);
+
+        // Hemisphere light for natural look
+        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c5c, 0.3);
+        scene.add(hemiLight);
+
+        // Ground
+        const groundGeometry = new THREE.CircleGeometry(45, 64);
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a2a4a,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Grid Helper
+        const gridHelper = new THREE.GridHelper(80, 40, 0x444466, 0x333355);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // Configuration
+        // Configuration
+        const urlParams = new URLSearchParams(window.location.search);
+        const STATION_COUNT = parseInt(urlParams.get('stations')) || 15;
+
+        // Dynamic Radius Calculation
+        // Circumference ~= STATION_COUNT * StationWidth(3) * 1.2 (gap)
+        const STATION_WIDTH_3D = 3;
+        const CIRCUMFERENCE = STATION_COUNT * STATION_WIDTH_3D * 1.5;
+        const CALC_RADIUS = CIRCUMFERENCE / (2 * Math.PI);
+
+        const RADIUS_STATIONS = Math.max(14, CALC_RADIUS); // Minimum 14 for aesthetics
+        const RADIUS_INNER = RADIUS_STATIONS - 6;   // CTU track inside
+        const RADIUS_OUTER = RADIUS_STATIONS + 6;   // AGV track outside
+
+        // Materials
+        const stationMaterial = new THREE.MeshStandardMaterial({
+            color: 0x6366f1,
+            roughness: 0.3,
+            metalness: 0.6
+        });
+        const agvTrackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x22c55e,
+            roughness: 0.5,
+            metalness: 0.3,
+            transparent: true,
+            opacity: 0.7
+        });
+        const ctuTrackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x3b82f6,
+            roughness: 0.5,
+            metalness: 0.3,
+            transparent: true,
+            opacity: 0.7
+        });
+
+        // Create Stations
+        const stations = [];
+        for (let i = 0; i < STATION_COUNT; i++) {
+            // Align S1 near Angle 0 (Warehouse is at Right/Angle 0)
+            // Start slightly below 0 (Entrance) and go CCW
+            const startAngle = -0.3;
+            const angle = startAngle + (i / STATION_COUNT) * (Math.PI * 2 - 0.5); // Spread over circle leaving gap for warehouse
+
+            const x = Math.cos(angle) * RADIUS_STATIONS;
+            const z = Math.sin(angle) * RADIUS_STATIONS;
+
+            // Station base
+            const stationGeo = new THREE.BoxGeometry(3, 2, 2);
+            const station = new THREE.Mesh(stationGeo, stationMaterial);
+            station.position.set(x, 1, z);
+            station.rotation.y = -angle + Math.PI / 2;
+            station.castShadow = true;
+            station.receiveShadow = true;
+            scene.add(station);
+
+            // Station Top (Work surface)
+            const topGeo = new THREE.BoxGeometry(2.8, 0.1, 1.8);
+            const topMat = new THREE.MeshStandardMaterial({ color: 0x818cf8, roughness: 0.2, metalness: 0.8 });
+            const top = new THREE.Mesh(topGeo, topMat);
+            top.position.set(x, 2.05, z);
+            top.rotation.y = -angle + Math.PI / 2;
+            scene.add(top);
+
+            stations.push(station);
+        }
+
+        // CTU Track (Inner Ring)
+        const ctuTrackGeo = new THREE.TorusGeometry(RADIUS_INNER, 0.8, 8, 64);
+        const ctuTrack = new THREE.Mesh(ctuTrackGeo, ctuTrackMaterial);
+        ctuTrack.rotation.x = Math.PI / 2;
+        ctuTrack.position.y = 0.3;
+        scene.add(ctuTrack);
+
+        // AGV Track (Outer Ring)
+        const agvTrackGeo = new THREE.TorusGeometry(RADIUS_OUTER, 1, 8, 64);
+        const agvTrack = new THREE.Mesh(agvTrackGeo, agvTrackMaterial);
+        agvTrack.rotation.x = Math.PI / 2;
+        agvTrack.position.y = 0.3;
+        scene.add(agvTrack);
+
+        // Center Hub
+        const hubGeo = new THREE.CylinderGeometry(3, 3.5, 1.5, 32);
+        const hubMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.4, metalness: 0.6 });
+        const hub = new THREE.Mesh(hubGeo, hubMat);
+        hub.position.y = 0.75;
+        hub.castShadow = true;
+        scene.add(hub);
+
+        // Hub Top
+        const hubTopGeo = new THREE.CylinderGeometry(2.5, 2.5, 0.2, 32);
+        const hubTopMat = new THREE.MeshStandardMaterial({ color: 0x60a5fa, roughness: 0.2, metalness: 0.9, emissive: 0x1d4ed8, emissiveIntensity: 0.2 });
+        const hubTop = new THREE.Mesh(hubTopGeo, hubTopMat);
+        hubTop.position.y = 1.6;
+        scene.add(hubTop);
+
+        // Warehouse
+        const WAREHOUSE_X = RADIUS_OUTER + 12;
+        const warehouseGeo = new THREE.BoxGeometry(8, 4, 6);
+        const warehouseMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.5, metalness: 0.3 });
+        const warehouse = new THREE.Mesh(warehouseGeo, warehouseMat);
+        warehouse.position.set(WAREHOUSE_X, 2, 0);
+        warehouse.castShadow = true;
+        warehouse.receiveShadow = true;
+        scene.add(warehouse);
+
+        // Warehouse Roof
+        const roofGeo = new THREE.ConeGeometry(5, 2, 4);
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.set(WAREHOUSE_X, 5, 0);
+        roof.rotation.y = Math.PI / 4;
+        scene.add(roof);
+
+        // AGV Bridge to Warehouse (Lower level - Ground)
+        const agvBridgeGeo = new THREE.BoxGeometry(12, 0.3, 2);
+        const agvBridgeMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.5, metalness: 0.4, transparent: true, opacity: 0.8 });
+        const agvBridge = new THREE.Mesh(agvBridgeGeo, agvBridgeMat);
+        // Position bridge between Ring and Warehouse
+        const BRIDGE_CENTER_X = (RADIUS_OUTER + WAREHOUSE_X) / 2;
+        agvBridge.position.set(BRIDGE_CENTER_X, 0.5, 3);
+        scene.add(agvBridge);
+
+        // AGV Bridge Railing
+        const agvRailGeo = new THREE.BoxGeometry(12, 0.5, 0.1);
+        const railMat = new THREE.MeshStandardMaterial({ color: 0x16a34a });
+        const agvRail1 = new THREE.Mesh(agvRailGeo, railMat);
+        agvRail1.position.set(BRIDGE_CENTER_X, 0.9, 2);
+        scene.add(agvRail1);
+        const agvRail2 = new THREE.Mesh(agvRailGeo, railMat);
+        agvRail2.position.set(BRIDGE_CENTER_X, 0.9, 4);
+        scene.add(agvRail2);
+
+        // CTU DUAL RAMPS - IN and OUT to prevent collisions
+        // IN Ramp: Blue - from CTU ring to warehouse
+        // OUT Ramp: Cyan - from warehouse back to CTU ring
+
+        const ctuInMat = new THREE.MeshStandardMaterial({
+            color: 0x3b82f6, roughness: 0.4, metalness: 0.5, transparent: true, opacity: 0.9
+        });
+        const ctuOutMat = new THREE.MeshStandardMaterial({
+            color: 0x06b6d4, roughness: 0.4, metalness: 0.5, transparent: true, opacity: 0.9
+        });
+        const ctuRailMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+        const ctuOutRailMat = new THREE.MeshStandardMaterial({ color: 0x0891b2 });
+        const pillarMat = new THREE.MeshStandardMaterial({
+            color: 0x1e40af, emissive: 0x3b82f6, emissiveIntensity: 0.2
+        });
+
+        // === NEW DESIGN: PARALLEL RAMPS AT SAME ANGLE ===
+        // Both ramps at angle 0° (pointing to warehouse), parallel lanes
+        // This allows CTU to complete FULL 360° circle (all 15 stations)
+
+        // Gap position: between Station 3 (at -18°) and Station 4 (at +6°)
+        // Ramp center at 0° with IN lane at -4° and OUT lane at +4°
+        const rampCenterAngle = 0; // Point directly at warehouse
+        const laneOffset = 0.12; // ~7° offset for each lane
+        const inGapAngle = rampCenterAngle - laneOffset;  // IN lane (returning)
+        const outGapAngle = rampCenterAngle + laneOffset; // OUT lane (departing)
+        const bridgeRadius = RADIUS_OUTER + 3;
+
+        // === IN RAMP (Blue) - Bottom lane ===
+        // Section 1: From warehouse
+        const inBridge1 = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 1.8), ctuInMat);
+        inBridge1.position.set(WAREHOUSE_X - 4, 4, Math.sin(inGapAngle) * 5);
+        scene.add(inBridge1);
+
+        // Pillar
+        const inPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 4, 8), pillarMat);
+        inPillar1.position.set(WAREHOUSE_X - 4, 2, Math.sin(inGapAngle) * 5);
+        scene.add(inPillar1);
+
+        // Section 2: Curved section at bridgeRadius
+        for (let i = 0; i < 6; i++) {
+            const t = i / 5;
+            const angle = 0.05 + (inGapAngle - 0.05) * t;
+            const height = 4 - t * 1.5;
+            const x = Math.cos(angle) * bridgeRadius;
+            const z = Math.sin(angle) * bridgeRadius;
+
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.35, 1.5), ctuInMat);
+            seg.position.set(x, height, z);
+            seg.rotation.y = -angle + Math.PI / 2;
+            scene.add(seg);
+
+            if (i % 2 === 0) {
+                const p = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, height, 8), pillarMat);
+                p.position.set(x, height / 2, z);
+                scene.add(p);
+            }
+        }
+
+        // Section 3: Descent to CTU ring
+        for (let i = 0; i < 5; i++) {
+            const t = i / 4;
+            const radius = bridgeRadius - t * (bridgeRadius - RADIUS_INNER - 0.5);
+            const height = 2.5 - t * 1.8;
+            const x = Math.cos(inGapAngle) * radius;
+            const z = Math.sin(inGapAngle) * radius;
+
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 1.5), ctuInMat);
+            seg.position.set(x, height, z);
+            seg.rotation.y = -inGapAngle;
+            scene.add(seg);
+        }
+
+        // === OUT RAMP (Cyan) - Top lane ===
+        // Section 1: From warehouse
+        const outBridge1 = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, 1.8), ctuOutMat);
+        outBridge1.position.set(WAREHOUSE_X - 4, 4, Math.sin(outGapAngle) * 5);
+        scene.add(outBridge1);
+
+        // Pillar
+        const outPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 4, 8), pillarMat);
+        outPillar1.position.set(WAREHOUSE_X - 4, 2, Math.sin(outGapAngle) * 5);
+        scene.add(outPillar1);
+
+        // Section 2: Curved section at bridgeRadius
+        for (let i = 0; i < 6; i++) {
+            const t = i / 5;
+            const angle = -0.05 + (outGapAngle + 0.05) * t;
+            const height = 4 - t * 1.5;
+            const x = Math.cos(angle) * bridgeRadius;
+            const z = Math.sin(angle) * bridgeRadius;
+
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.35, 1.5), ctuOutMat);
+            seg.position.set(x, height, z);
+            seg.rotation.y = -angle + Math.PI / 2;
+            scene.add(seg);
+
+            if (i % 2 === 0) {
+                const p = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, height, 8), pillarMat);
+                p.position.set(x, height / 2, z);
+                scene.add(p);
+            }
+        }
+
+        // Section 3: Descent to CTU ring
+        for (let i = 0; i < 5; i++) {
+            const t = i / 4;
+            const radius = bridgeRadius - t * (bridgeRadius - RADIUS_INNER - 0.5);
+            const height = 2.5 - t * 1.8;
+            const x = Math.cos(outGapAngle) * radius;
+            const z = Math.sin(outGapAngle) * radius;
+
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 1.5), ctuOutMat);
+            seg.position.set(x, height, z);
+            seg.rotation.y = -outGapAngle;
+            scene.add(seg);
+        }
+
+        // Direction arrows/labels on warehouse
+        // IN arrow (right side, blue)
+        const inArrowGeo = new THREE.ConeGeometry(0.5, 1, 4);
+        const inArrow = new THREE.Mesh(inArrowGeo, ctuInMat);
+        inArrow.position.set(WAREHOUSE_X - 2, 4.5, -2);
+        inArrow.rotation.z = Math.PI / 2;
+        scene.add(inArrow);
+
+        // OUT arrow (left side, cyan)
+        const outArrow = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 4), ctuOutMat);
+        outArrow.position.set(WAREHOUSE_X - 2, 4.5, 2);
+        outArrow.rotation.z = -Math.PI / 2;
+        scene.add(outArrow);
+
+        // AGV Vehicle
+        const agvGeo = new THREE.BoxGeometry(2, 0.8, 1.5);
+        const agvMat = new THREE.MeshStandardMaterial({
+            color: 0x22c55e,
+            roughness: 0.3,
+            metalness: 0.7,
+            emissive: 0x16a34a,
+            emissiveIntensity: 0.3
+        });
+        const agv = new THREE.Mesh(agvGeo, agvMat);
+        agv.castShadow = true;
+        scene.add(agv);
+
+        // AGV Light
+        const agvLight = new THREE.PointLight(0x22c55e, 0.5, 5);
+        agv.add(agvLight);
+
+        // CTU Vehicles - 5 vehicles in queue formation
+        const ctuGeo = new THREE.CylinderGeometry(0.8, 1, 0.6, 16);
+        const ctuMat = new THREE.MeshStandardMaterial({
+            color: 0x3b82f6,
+            roughness: 0.3,
+            metalness: 0.7,
+            emissive: 0x2563eb,
+            emissiveIntensity: 0.3
+        });
+
+        const CTU_COUNT = 5;
+        const ctus = [];
+        for (let i = 0; i < CTU_COUNT; i++) {
+            const ctu = new THREE.Mesh(ctuGeo, ctuMat);
+            ctu.castShadow = true;
+            scene.add(ctu);
+
+            // Add light to each CTU
+            const ctuLight = new THREE.PointLight(0x3b82f6, 0.3, 3);
+            ctu.add(ctuLight);
+
+            ctus.push(ctu);
+        }
+
+        // Animation State
+        let agvAngle = 0;
+        const AGV_SPEED = 0.005;
+
+        // CTU Full Path Definition - CORRECTED
+        // Path: Warehouse → OUT ramp (cyan, descends) → Circle CCW → IN ramp (blue, ascends) → Warehouse
+        const ctuFullPath = [];
+
+        // === Phase 1: At warehouse ===
+        ctuFullPath.push({ x: WAREHOUSE_X, y: 4, z: Math.sin(outGapAngle) * 5 });
+        ctuFullPath.push({ x: WAREHOUSE_X - 4, y: 4, z: Math.sin(outGapAngle) * 5 });
+
+        // === Phase 2a: OUT Ramp - Curved section at bridgeRadius ===
+        for (let i = 0; i < 6; i++) {
+            const t = i / 5;
+            const angle = -0.05 + (outGapAngle + 0.05) * t;
+            const height = 4 - t * 1.5;
+            ctuFullPath.push({ x: Math.cos(angle) * bridgeRadius, y: height, z: Math.sin(angle) * bridgeRadius });
+        }
+
+        // === Phase 2b: OUT Ramp - Descent to ring ===
+        for (let i = 0; i < 5; i++) {
+            const t = i / 4;
+            const radius = bridgeRadius - t * (bridgeRadius - RADIUS_INNER - 0.5);
+            const height = 2.5 - t * 1.8;
+            ctuFullPath.push({ x: Math.cos(outGapAngle) * radius, y: height, z: Math.sin(outGapAngle) * radius });
+        }
+
+        // === Phase 3: FULL 360° Circle (all 15 stations) ===
+        // From outGapAngle (+7°) going CCW full circle to inGapAngle (-7°)
+        const circleSteps = 60;
+        const fullCircle = 2 * Math.PI - (outGapAngle - inGapAngle); // ~346°
+        for (let i = 0; i <= circleSteps; i++) {
+            const angle = outGapAngle - fullCircle * (i / circleSteps);
+            ctuFullPath.push({ x: Math.cos(angle) * RADIUS_INNER, y: 0.7, z: Math.sin(angle) * RADIUS_INNER });
+        }
+
+        // === Phase 4a: IN Ramp - Ascent from ring ===
+        for (let i = 0; i < 5; i++) {
+            const t = i / 4;
+            const radius = (RADIUS_INNER + 0.5) + t * (bridgeRadius - RADIUS_INNER - 0.5);
+            const height = 0.7 + t * 1.8;
+            ctuFullPath.push({ x: Math.cos(inGapAngle) * radius, y: height, z: Math.sin(inGapAngle) * radius });
+        }
+
+        // === Phase 4b: IN Ramp - Curved section at bridgeRadius ===
+        for (let i = 0; i < 6; i++) {
+            const t = i / 5;
+            const angle = inGapAngle + (0.05 - inGapAngle) * t;
+            const height = 2.5 + t * 1.5;
+            ctuFullPath.push({ x: Math.cos(angle) * bridgeRadius, y: height, z: Math.sin(angle) * bridgeRadius });
+        }
+
+        // === Phase 5: Back to warehouse ===
+        ctuFullPath.push({ x: WAREHOUSE_X - 4, y: 4, z: Math.sin(inGapAngle) * 5 });
+        ctuFullPath.push({ x: WAREHOUSE_X, y: 4, z: Math.sin(inGapAngle) * 5 });
+        ctuFullPath.push({ x: WAREHOUSE_X, y: 4, z: Math.sin(outGapAngle) * 5 }); // Loop
+
+        // CTU progress (0 to 1 for each vehicle) - evenly spaced along path
+        const ctuProgress = [];
+        for (let i = 0; i < CTU_COUNT; i++) {
+            ctuProgress.push(i / CTU_COUNT); // Evenly spaced
+        }
+        const CTU_SPEED = 0.002;
+
+        // Helper function to get position on path
+        function getPathPosition(path, progress) {
+            const totalSteps = path.length - 1;
+            const exactStep = progress * totalSteps;
+            const step = Math.floor(exactStep);
+            const frac = exactStep - step;
+
+            if (step >= totalSteps) {
+                return path[totalSteps];
+            }
+
+            return {
+                x: path[step].x + (path[step + 1].x - path[step].x) * frac,
+                y: path[step].y + (path[step + 1].y - path[step].y) * frac,
+                z: path[step].z + (path[step + 1].z - path[step].z) * frac
+            };
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update AGV position
+            agvAngle += AGV_SPEED;
+            if (agvAngle > Math.PI * 2) agvAngle -= Math.PI * 2;
+            agv.position.x = Math.cos(agvAngle) * RADIUS_OUTER;
+            agv.position.z = Math.sin(agvAngle) * RADIUS_OUTER;
+            agv.position.y = 0.7;
+            agv.rotation.y = -agvAngle + Math.PI / 2;
+
+            // Update all CTU positions along full path
+            for (let i = 0; i < CTU_COUNT; i++) {
+                ctuProgress[i] += CTU_SPEED;
+                if (ctuProgress[i] >= 1) ctuProgress[i] -= 1;
+
+                const pos = getPathPosition(ctuFullPath, ctuProgress[i]);
+                ctus[i].position.x = pos.x;
+                ctus[i].position.y = pos.y;
+                ctus[i].position.z = pos.z;
+            }
+
+            // Rotate hub slowly
+            hubTop.rotation.y += 0.002;
+
+            // Update stats
+            document.getElementById('stats').textContent =
+                `AGV: ${Math.round(agvAngle * 180 / Math.PI)}° | CTU x${CTU_COUNT} (Full Path)`;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start Animation
+        animate();
+    </script>
+</body>
+
+</html>

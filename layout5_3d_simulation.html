@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Layout 5 "Chữ C (Kho Bên Ngoài)"</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 320px;
+            z-index: 100;
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 8px;
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div class="ui-overlay">
+        <h1>🏗️ Layout 5: Chữ C (Kho Bên Ngoài)</h1>
+        <p>Kho nằm ngoài bên phải. Đường AGV (ngoài) và CTU (trong) nối song song từ 2 đầu chữ C về kho.</p>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6366f1;"></div><span>Trạm (Station)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e;"></div><span>Đường AGV (Ngoài)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3b82f6;"></div><span>Đường CTU (Trong)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fbbf24;"></div><span>Kho (Warehouse)</span>
+            </div>
+        </div>
+        <div class="controls-hint"><strong>Điều khiển:</strong><br>🖱️ Kéo chuột: Xoay camera<br>🔄 Cuộn chuột:
+            Zoom<br>➡️ Chuột phải: Di chuyển</div>
+    </div>
+    <div class="stats" id="stats">AGV: 0% | CTU: 0%</div>
+
+    <script>
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 40, 120);
+
+        // Error Logger
+        window.onerror = function (msg, source, lineno, colno, error) {
+            const errDiv = document.createElement('div');
+            errDiv.style.position = 'absolute';
+            errDiv.style.top = '50%';
+            errDiv.style.left = '50%';
+            errDiv.style.transform = 'translate(-50%, -50%)';
+            errDiv.style.background = 'red';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '20px';
+            errDiv.style.zIndex = '9999';
+            errDiv.innerText = "ERROR: " + msg;
+            document.body.appendChild(errDiv);
+        };
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(30, 45, 30);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c5c, 0.3);
+        scene.add(hemiLight);
+
+        // Ground
+        const ground = new THREE.Mesh(
+            new THREE.CircleGeometry(50, 64),
+            new THREE.MeshStandardMaterial({ color: 0x2a2a4a, roughness: 0.8, metalness: 0.2 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        const gridHelper = new THREE.GridHelper(80, 40, 0x444466, 0x333355);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // --- LAYOUT CONSTANTS ---
+        // --- LAYOUT CONSTANTS ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const STATION_COUNT = parseInt(urlParams.get('stations')) || 15; // Default 15
+
+        // Dynamic Radius Calculation
+        // Desired Arc Length = STATION_COUNT * StationWidth(approx 3) * GapFactor(1.2)
+        const ARC_COVERAGE = 0.8; // C-Shape covers ~80% of circle
+        const TOTAL_STATION_LEN = STATION_COUNT * 3.5;
+        const CALC_RADIUS = TOTAL_STATION_LEN / (2 * Math.PI * ARC_COVERAGE);
+
+        const RADIUS_STATION = Math.max(14, CALC_RADIUS);
+        const RADIUS_AGV = RADIUS_STATION + 4;
+        const RADIUS_CTU = RADIUS_STATION - 4;
+
+        const WAREHOUSE_X = RADIUS_AGV + 8;
+        const WAREHOUSE_Z_OFFSET = 6; // Vertical separation (Z axis in 3D is like Y in 2D)
+
+        // C-Shape Angles (in Radians)
+        // 0 is Right (Positive X). Z is Down (Positive 2D Y).
+        // Gap is ~80 deg. +/- 40 deg.
+        // In 3D (X, Z plane): 
+        // 0 angle is +X.
+        // We want the gap to be at +X.
+        // So Arc starts at roughly +40 deg and goes around to -40 deg (320 deg total).
+        const GAP_HALF_ANGLE = Math.PI / 4.5; // ~40 deg
+        const ARC_START_ANGLE = GAP_HALF_ANGLE;
+        const ARC_END_ANGLE = 2 * Math.PI - GAP_HALF_ANGLE;
+        const ARC_LENGTH = ARC_END_ANGLE - ARC_START_ANGLE;
+
+        // --- GEOMETRY HELPER ---
+        function createTrack(radius, color, width) {
+            // C-Shape Arc
+            const geometry = new THREE.TorusGeometry(radius, width, 16, 100, ARC_LENGTH);
+            const material = new THREE.MeshStandardMaterial({ color: color, flatShading: true });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.rotation.z = GAP_HALF_ANGLE; // Start rotation
+            mesh.castShadow = true;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        function createStraightTrack(start, end, color, width) {
+            // Use Cylinder for volume line
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+            const geometry = new THREE.CylinderGeometry(width, width, length, 8);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const cylinder = new THREE.Mesh(geometry, material);
+
+            // Position and Rotation
+            const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            cylinder.position.copy(center);
+            cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
+
+            cylinder.castShadow = true;
+            scene.add(cylinder);
+            return cylinder;
+        }
+
+        // --- BUILD LAYOUT ---
+
+        // 1. Tracks (Arcs)
+        createTrack(RADIUS_AGV, 0x22c55e, 0.6); // AGV
+        createTrack(RADIUS_CTU, 0x3b82f6, 0.5); // CTU
+
+        // Calculate Tip Points (for connecting straight lines)
+        // Note: 3D axes: X is Right, Z is Down/Forward (Screen Y equivalent).
+        // Angle 0 is +X.
+        const tipTopAngle = ARC_END_ANGLE + GAP_HALF_ANGLE; // = 2*PI (or 0)?? Wait. 
+        // Math check: Torus starts drawing at 0. Rotation Z shifts it.
+        // Let's rely on simple trig for points.
+        // Gap is centered at +X (0 deg).
+        // Top Tip is at -40 deg (negative Z).
+        // Bottom Tip is at +40 deg (positive Z).
+
+        const ptAgvTop = new THREE.Vector3(Math.cos(-GAP_HALF_ANGLE) * RADIUS_AGV, 0.1, Math.sin(-GAP_HALF_ANGLE) * RADIUS_AGV);
+        const ptAgvBottom = new THREE.Vector3(Math.cos(GAP_HALF_ANGLE) * RADIUS_AGV, 0.1, Math.sin(GAP_HALF_ANGLE) * RADIUS_AGV);
+
+        const ptCtuTop = new THREE.Vector3(Math.cos(-GAP_HALF_ANGLE) * RADIUS_CTU, 0.1, Math.sin(-GAP_HALF_ANGLE) * RADIUS_CTU);
+        const ptCtuBottom = new THREE.Vector3(Math.cos(GAP_HALF_ANGLE) * RADIUS_CTU, 0.1, Math.sin(GAP_HALF_ANGLE) * RADIUS_CTU);
+
+        // Warehouse Points
+        const ptWhAgvTop = new THREE.Vector3(WAREHOUSE_X, 0.1, -5.5); // Top edge Agv
+        const ptWhAgvBottom = new THREE.Vector3(WAREHOUSE_X, 0.1, 5.5); // Bottom edge Agv
+
+        const ptWhCtuTop = new THREE.Vector3(WAREHOUSE_X, 0.1, -2.5); // Top edge Ctu (inner)
+        const ptWhCtuBottom = new THREE.Vector3(WAREHOUSE_X, 0.1, 2.5); // Bottom edge Ctu (inner)
+
+        // 2. Straight Parallel Connections
+        createStraightTrack(ptWhAgvTop, ptAgvTop, 0x22c55e, 0.6);
+        createStraightTrack(ptWhAgvBottom, ptAgvBottom, 0x22c55e, 0.6);
+
+        createStraightTrack(ptWhCtuTop, ptCtuTop, 0x3b82f6, 0.5);
+        createStraightTrack(ptWhCtuBottom, ptCtuBottom, 0x3b82f6, 0.5);
+
+        // 3. Warehouse
+        const warehouseGeo = new THREE.BoxGeometry(8, 6, 14);
+        const warehouseMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24 });
+        const warehouse = new THREE.Mesh(warehouseGeo, warehouseMat);
+        warehouse.position.set(WAREHOUSE_X + 4, 3, 0);
+        warehouse.castShadow = true;
+        scene.add(warehouse);
+
+        // 4. Stations (Ring)
+        for (let i = 0; i < STATION_COUNT; i++) {
+            const t = i / (STATION_COUNT - 1);
+            // Distribute along the C-Arc from Bottom to Top? Or Top to Bottom?
+            // Let's do Top (-40) to Bottom (+40) ? No, standard is Bottom (+40) to Top (320 deg later).
+            // Actually let's match the visual arc.
+            const angle = GAP_HALF_ANGLE + t * (2 * Math.PI - 2 * GAP_HALF_ANGLE);
+
+            const sx = Math.cos(angle) * RADIUS_STATION;
+            const sz = Math.sin(angle) * RADIUS_STATION;
+
+            const sGeo = new THREE.BoxGeometry(2, 2.5, 2);
+            const sMat = new THREE.MeshStandardMaterial({ color: 0x6366f1 });
+            const station = new THREE.Mesh(sGeo, sMat);
+            station.position.set(sx, 1.25, sz);
+            station.lookAt(0, 1.25, 0);
+            station.castShadow = true;
+            scene.add(station);
+
+            // Text Label (S1..S15) - simplified generic text or just color
+        }
+
+        // --- VEHICLES ---
+        function createVehicle(color, w, h, d) {
+            const geometry = new THREE.BoxGeometry(w, h, d);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.position.y = h / 2;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        const agv = createVehicle(0x00ff00, 1.2, 0.8, 1.8);
+        const ctu = createVehicle(0x0000ff, 1.0, 0.7, 1.5);
+
+        // --- ANIMATION LOGIC ---
+        // Path Definitions: straight -> arc -> straight -> loop
+
+        function getAgvPosition(t) {
+            // Flow: Top IN -> Bottom OUT
+            // 1. Top Straight: WhTop -> AgvTop
+            const l1 = ptWhAgvTop.distanceTo(ptAgvTop);
+            // 2. Arc: AgvTop -> AgvBottom (Counter-Clockwise relative to center)
+            const l2 = (2 * Math.PI - 2 * GAP_HALF_ANGLE) * RADIUS_AGV;
+            // 3. Bottom Straight: AgvBottom -> WhBottom
+            const l3 = ptAgvBottom.distanceTo(ptWhAgvBottom);
+            // 4. Warehouse Loop: WhBottom -> WhTop
+            const l4 = ptWhAgvBottom.distanceTo(ptWhAgvTop);
+
+            const total = l1 + l2 + l3 + l4;
+            const d = t * total;
+
+            if (d < l1) { // Top Straight (IN)
+                const alpha = d / l1;
+                return new THREE.Vector3().lerpVectors(ptWhAgvTop, ptAgvTop, alpha);
+            } else if (d < l1 + l2) { // Arc (Top -> Bottom)
+                const alpha = (d - l1) / l2;
+                // Angle goes from Top (-40 deg / 320 deg) to Bottom (+40 deg).
+                // Top is ARC_END_ANGLE (approx 320 deg). Bottom is ARC_START_ANGLE (approx 40 deg).
+                // We want to traverse from 320 DOWN to 40? No, that goes through 0 (Gap).
+                // We want to traverse 320 -> 270 -> 180 -> 90 -> 40.
+                // So angle decreases.
+                const angle = ARC_END_ANGLE - alpha * ARC_LENGTH;
+                return new THREE.Vector3(Math.cos(angle) * RADIUS_AGV, 0, Math.sin(angle) * RADIUS_AGV);
+            } else if (d < l1 + l2 + l3) { // Bottom Straight (OUT)
+                const alpha = (d - l1 - l2) / l3;
+                return new THREE.Vector3().lerpVectors(ptAgvBottom, ptWhAgvBottom, alpha);
+            } else { // Warehouse Loop
+                const alpha = (d - l1 - l2 - l3) / l4;
+                return new THREE.Vector3().lerpVectors(ptWhAgvBottom, ptWhAgvTop, alpha);
+            }
+        }
+
+        function getCtuPosition(t) {
+            const l1 = ptWhCtuBottom.distanceTo(ptCtuBottom);
+            const l2 = (2 * Math.PI - 2 * GAP_HALF_ANGLE) * RADIUS_CTU;
+            const l3 = ptCtuTop.distanceTo(ptWhCtuTop);
+            const l4 = ptWhCtuTop.distanceTo(ptWhCtuBottom);
+
+            const total = l1 + l2 + l3 + l4;
+            const d = t * total;
+
+            if (d < l1) {
+                const alpha = d / l1;
+                return new THREE.Vector3().lerpVectors(ptWhCtuBottom, ptCtuBottom, alpha);
+            } else if (d < l1 + l2) {
+                const alpha = (d - l1) / l2;
+                const angle = GAP_HALF_ANGLE + alpha * (2 * Math.PI - 2 * GAP_HALF_ANGLE);
+                return new THREE.Vector3(Math.cos(angle) * RADIUS_CTU, 0, Math.sin(angle) * RADIUS_CTU);
+            } else if (d < l1 + l2 + l3) {
+                const alpha = (d - l1 - l2) / l3;
+                return new THREE.Vector3().lerpVectors(ptCtuTop, ptWhCtuTop, alpha);
+            } else {
+                const alpha = (d - l1 - l2 - l3) / l4;
+                return new THREE.Vector3().lerpVectors(ptWhCtuTop, ptWhCtuBottom, alpha);
+            }
+        }
+
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.002;
+
+            const agvPos = getAgvPosition((time * 1.0) % 1);
+            agv.position.set(agvPos.x, 0.4, agvPos.z);
+            agv.lookAt(agvPos.x + (getAgvPosition(((time + 0.01) * 1.0) % 1).x - agvPos.x), 0.4, agvPos.z + (getAgvPosition(((time + 0.01) * 1.0) % 1).z - agvPos.z));
+
+            const ctuPos = getCtuPosition((time * 0.8) % 1); // CTU slower
+            ctu.position.set(ctuPos.x, 0.35, ctuPos.z);
+            ctu.lookAt(ctuPos.x + (getCtuPosition(((time + 0.01) * 0.8) % 1).x - ctuPos.x), 0.35, ctuPos.z + (getCtuPosition(((time + 0.01) * 0.8) % 1).z - ctuPos.z));
+
+            // Stats update
+            document.getElementById('stats').innerText = `AGV: ${Math.round(((time * 1.0) % 1) * 100)}% | CTU: ${Math.round(((time * 0.8) % 1) * 100)}%`;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>

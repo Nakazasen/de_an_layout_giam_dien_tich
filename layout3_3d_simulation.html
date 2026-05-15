@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Layout 3 "Đối Xứng (Back-to-Back)"</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 320px;
+            z-index: 100;
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 8px;
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+
+    <div class="ui-overlay">
+        <h1>🏭 Layout 3: Đối Xứng (Back-to-Back)</h1>
+        <p>Mô phỏng 3D dây chuyền sản xuất Fuser 15 trạm bố trí 2 hàng quay lưng, dùng chung đường CTU.</p>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6366f1;"></div>
+                <span>Trạm làm việc (Station)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e;"></div>
+                <span>Đường AGV (Vòng ngoài)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3b82f6;"></div>
+                <span>Đường CTU (Chung ở giữa)</span>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            <strong>Điều khiển:</strong><br>
+            🖱️ Kéo chuột: Xoay camera<br>
+            🔄 Cuộn chuột: Zoom<br>
+            ➡️ Chuột phải + kéo: Di chuyển
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        AGV Running | CTU Running
+    </div>
+
+    <script>
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 50, 150);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(40, 35, 40);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2.1;
+        controls.minDistance = 15;
+        controls.maxDistance = 100;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(30, 50, 30);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 150;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        scene.add(directionalLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c5c, 0.3);
+        scene.add(hemiLight);
+
+        // Ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a2a4a,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Grid Helper
+        const gridHelper = new THREE.GridHelper(100, 50, 0x444466, 0x333355);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // --- LAYOUT CONFIGURATION ---
+        // Parse URL Parameter for Station Count
+        const urlParams = new URLSearchParams(window.location.search);
+        const STATION_COUNT = parseInt(urlParams.get('stations')) || 15; // Default 15
+
+        // Split stations into 2 rows (Back-to-Back)
+        const countTop = Math.ceil(STATION_COUNT / 2);
+        const countBot = Math.floor(STATION_COUNT / 2);
+
+        const STATION_W = 3;  // Width in 3D units
+        const STATION_D = 2;  // Depth in 3D units
+        const GAP_X = 0.5;    // Gap between stations
+        const AISLE_WIDTH = 4; // Shared CTU aisle width
+
+        const ROW1_Z = -AISLE_WIDTH / 2 - STATION_D / 2; // Z position for Row 1 center
+        const ROW2_Z = AISLE_WIDTH / 2 + STATION_D / 2;  // Z position for Row 2 center
+
+        const START_X = -12; // Start X position
+
+        // Materials
+        const stationMaterial = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.3, metalness: 0.6 });
+        const topMat = new THREE.MeshStandardMaterial({ color: 0x818cf8, roughness: 0.2, metalness: 0.8 });
+        const ctuTrackMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5 });
+        const agvTrackMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5 });
+
+        // Create Stations
+        const stations = [];
+
+        function createStation3D(x, z, rotationY, label) {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            group.rotation.y = rotationY;
+
+            // Base
+            const base = new THREE.Mesh(new THREE.BoxGeometry(STATION_W, 2, STATION_D), stationMaterial);
+            base.position.y = 1;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            group.add(base);
+
+            // Table Top
+            const top = new THREE.Mesh(new THREE.BoxGeometry(STATION_W - 0.2, 0.1, STATION_D - 0.2), topMat);
+            top.position.y = 2.05;
+            group.add(top);
+
+            scene.add(group);
+            return group;
+        }
+
+        // Row 1: countTop Stations
+        for (let i = 0; i < countTop; i++) {
+            const x = START_X + i * (STATION_W + GAP_X);
+            createStation3D(x, ROW1_Z, 0, `S${i + 1}`);
+        }
+
+        // Row 2: countBot Stations
+        for (let i = 0; i < countBot; i++) {
+            const x = START_X + i * (STATION_W + GAP_X); // Align with Row 1
+            createStation3D(x, ROW2_Z, Math.PI, `S${i + countTop + 1}`);
+        }
+
+        // --- CTU TRACK (Shared Middle) ---
+        const trackLength = Math.max(countTop, countBot) * (STATION_W + GAP_X);
+        const ctuTrackGeo = new THREE.BoxGeometry(trackLength + 2, 0.1, 1.5);
+        const ctuTrack = new THREE.Mesh(ctuTrackGeo, ctuTrackMat);
+        ctuTrack.position.set(START_X + trackLength / 2 - 2, 0.05, 0); // Center Z=0
+        scene.add(ctuTrack);
+
+        // --- AGV TRACK (Outer Loop) ---
+        // Points for rectangular loop
+        const agvLoopPoints = [];
+        const agvMinX = START_X - 4;
+        const agvMaxX = START_X + trackLength - 2;
+        const agvMinZ = ROW1_Z - STATION_D - 2;
+        const agvMaxZ = ROW2_Z + STATION_D + 2;
+
+        const agvLoopGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(agvMinX, 0.1, agvMinZ),
+            new THREE.Vector3(agvMaxX, 0.1, agvMinZ),
+            new THREE.Vector3(agvMaxX, 0.1, agvMaxZ),
+            new THREE.Vector3(agvMinX, 0.1, agvMaxZ),
+            new THREE.Vector3(agvMinX, 0.1, agvMinZ)
+        ]);
+        const agvLine = new THREE.Line(agvLoopGeo, new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 3 }));
+        scene.add(agvLine);
+
+        // Visual track width mesh
+        const agvPathWidth = 1.5;
+        // Top seg
+        const agvTop = new THREE.Mesh(new THREE.BoxGeometry(agvMaxX - agvMinX, 0.1, agvPathWidth), agvTrackMat);
+        agvTop.position.set((agvMinX + agvMaxX) / 2, 0.05, agvMinZ);
+        scene.add(agvTop);
+        // Bot seg
+        const agvBot = new THREE.Mesh(new THREE.BoxGeometry(agvMaxX - agvMinX, 0.1, agvPathWidth), agvTrackMat);
+        agvBot.position.set((agvMinX + agvMaxX) / 2, 0.05, agvMaxZ);
+        scene.add(agvBot);
+        // Right seg
+        const agvRight = new THREE.Mesh(new THREE.BoxGeometry(agvPathWidth, 0.1, agvMaxZ - agvMinZ), agvTrackMat);
+        agvRight.position.set(agvMaxX, 0.05, (agvMinZ + agvMaxZ) / 2);
+        scene.add(agvRight);
+        // Left seg
+        const agvLeft = new THREE.Mesh(new THREE.BoxGeometry(agvPathWidth, 0.1, agvMaxZ - agvMinZ), agvTrackMat);
+        agvLeft.position.set(agvMinX, 0.05, (agvMinZ + agvMaxZ) / 2);
+        scene.add(agvLeft);
+
+
+        // --- VEHICLES ---
+        // CTU
+        const ctuGeo = new THREE.BoxGeometry(1.2, 1.5, 0.8);
+        const ctuMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x2563eb, emissiveIntensity: 0.3 });
+        const ctu = new THREE.Mesh(ctuGeo, ctuMat);
+        ctu.position.y = 0.75;
+        ctu.castShadow = true;
+        scene.add(ctu);
+
+        // AGV
+        const agvGeo = new THREE.BoxGeometry(1.5, 0.6, 1);
+        const agvMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.3 });
+        const agv = new THREE.Mesh(agvGeo, agvMat);
+        agv.position.y = 0.3;
+        agv.castShadow = true;
+        scene.add(agv);
+
+        // --- ANIMATION LOGIC ---
+        let ctuProgress = 0;
+        let ctuDirection = 1;
+
+        let agvProgress = 0;
+        const AGV_SPEED = 0.003;
+        const CTU_SPEED = 0.01;
+
+        // Path definitions for lerping
+        const ctuStartX = START_X - 1;
+        const ctuEndX = START_X + trackLength - 3; // Ensure it stays within track
+
+        // AGV Full Loop Path Points
+        // 0: TL (MinX, MinZ) -> 1: TR (MaxX, MinZ) -> 2: BR (MaxX, MaxZ) -> 3: BL (MinX, MaxZ) -> 0
+        const agvPath = [
+            { x: agvMinX, z: agvMinZ }, // TL
+            { x: agvMaxX, z: agvMinZ }, // TR
+            { x: agvMaxX, z: agvMaxZ }, // BR
+            { x: agvMinX, z: agvMaxZ }  // BL
+        ];
+
+        function getAGVPos(progress) {
+            // progress 0..1
+            // 4 segments.
+            const p = progress * 4;
+            const seg = Math.floor(p) % 4;
+            const t = p - Math.floor(p);
+
+            const p1 = agvPath[seg];
+            const p2 = agvPath[(seg + 1) % 4];
+
+            return {
+                x: p1.x + (p2.x - p1.x) * t,
+                z: p1.z + (p2.z - p1.z) * t,
+                heading: Math.atan2(p2.x - p1.x, p2.z - p1.z) // Facing direction
+            };
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // CTU Move (Ping-Pong)
+            ctuProgress += CTU_SPEED * ctuDirection;
+            if (ctuProgress > 1) { ctuProgress = 1; ctuDirection = -1; }
+            if (ctuProgress < 0) { ctuProgress = 0; ctuDirection = 1; }
+
+            ctu.position.x = ctuStartX + (ctuEndX - ctuStartX) * ctuProgress;
+            ctu.position.z = 0; // Center aisle
+
+            // AGV Move (Loop)
+            agvProgress += AGV_SPEED;
+            if (agvProgress > 1) agvProgress = 0;
+
+            const agvState = getAGVPos(agvProgress);
+            agv.position.x = agvState.x;
+            agv.position.z = agvState.z;
+            agv.rotation.y = agvState.heading + Math.PI / 2; // Adjust if model needs rotation
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start Animation
+        animate();
+    </script>
+</body>
+
+</html>

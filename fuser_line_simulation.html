@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Layout Chuyền Sản Xuất Fuser</title>
+    <script src="assets/lib/tailwindcss.js"></script>
+    <script src="assets/lib/chart.min.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body class="p-6">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">Mô phỏng 8 Đề án Layout Chuyền Fuser (<span
+                    id="header-station-count">15</span> Station)</h1>
+            <p class="text-gray-600 mt-2">Mục tiêu: Giảm diện tích, tích hợp AGV (mặt trước) và CTU (mặt sau).</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            <!-- Controls & Info -->
+            <div class="w-full lg:w-1/3 space-y-6">
+
+                <!-- NEW: Global Station Count Config (Moved from Multi-Line) -->
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-400">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                        <span>⚡ Cấu Hình Số Lượng Trạm</span>
+                    </h2>
+                    <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                        <label class="block text-sm font-bold text-gray-800 mb-2 underline decoration-yellow-400">Số
+                            lượng Trạm (5-50):</label>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="cfg-station-count" min="5" max="50" value="19"
+                                class="w-20 p-2 border-2 border-yellow-200 rounded bg-white font-bold text-center text-blue-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                                onchange="updateStationCount()">
+                            <input type="range" id="cfg-station-range" min="5" max="50" value="19"
+                                class="flex-1 accent-yellow-500" oninput="syncStationInputs(this.value)">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 italic">Thay đổi số lượng máy để xem các layout tự động co
+                            giãn kích thước.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <!-- Mode Selector -->
+                    <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
+                        <button onclick="switchMode('single')" id="btn-mode-single"
+                            class="flex-1 py-2 text-xs font-bold rounded-md bg-white shadow text-blue-700 transition-all">Single
+                            Line</button>
+                        <button onclick="switchMode('multi')" id="btn-mode-multi"
+                            class="flex-1 py-2 text-xs font-bold rounded-md text-gray-500 hover:bg-gray-200 transition-all">Multi-Line</button>
+                        <button onclick="switchMode('algorithms')" id="btn-mode-algorithms"
+                            class="flex-1 py-2 text-xs font-bold rounded-md text-gray-500 hover:bg-gray-200 transition-all">📚
+                            Thuật Toán</button>
+                    </div>
+
+                    <div id="single-line-controls">
+                        <h2 class="text-xl font-semibold mb-4">Chọn Phương Án Layout</h2>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="setScheme(1)" id="btn-1"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-gray-100 hover:bg-gray-200 font-medium active">
+                                1. Layout Thẳng (Tối ưu dòng chảy)
+                            </button>
+                            <button onclick="setScheme(2)" id="btn-2"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-gray-100 hover:bg-gray-200 font-medium">
+                                2. Layout Chữ U (Tiết kiệm diện tích)
+                            </button>
+                            <button onclick="setScheme(3)" id="btn-3"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-gray-100 hover:bg-gray-200 font-medium">
+                                3. Layout Đối Xứng (Sử dụng chung lưng)
+                            </button>
+                            <button onclick="setScheme(4)" id="btn-4"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-pink-100 hover:bg-pink-200 text-pink-900 font-medium ring-1 ring-pink-300">
+                                4. Layout "Đấu Trường" (Hình Tròn/Xoay)
+                            </button>
+                            <button onclick="setScheme(5)" id="btn-5"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-medium ring-1 ring-purple-300">
+                                5. Layout Chữ C (Kho Bên Ngoài)
+                            </button>
+                            <button onclick="setScheme(6)" id="btn-6"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-medium ring-1 ring-yellow-300">
+                                6. Layout Vuông (Square Loop)
+                            </button>
+                            <button onclick="setScheme(7)" id="btn-7"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-green-100 hover:bg-green-200 text-green-900 font-medium ring-1 ring-green-300">
+                                🏆 7. Layout Xương Cá (Herringbone)
+                            </button>
+                            <button onclick="setScheme(8)" id="btn-8"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-900 font-medium ring-1 ring-orange-300">
+                                8. Layout Chữ U Úp (n-Shape)
+                            </button>
+                        </div>
+                    </div> <!-- End Single Line Controls -->
+
+                    <!-- Multi Line Controls (Hidden by default) -->
+                    <div id="multi-line-controls" class="hidden space-y-4">
+                        <h2 class="text-xl font-semibold mb-2">Cấu Hình Đa Chuyền</h2>
+                        <p class="text-xs text-gray-500 mb-4">So sánh hiệu quả quãng đường di chuyển của CTU khi cấp
+                            hàng cho nhiều line cùng lúc.</p>
+
+
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng Line
+                                (Multi-mode):</label>
+                            <select id="cfg-line-count" class="w-full p-2 border rounded bg-slate-50 font-bold"
+                                onchange="updateMultiLine()">
+                                <option value="1">1 Line</option>
+                                <option value="2">2 Lines</option>
+                                <option value="3" selected>3 Lines</option>
+                                <option value="4">4 Lines</option>
+                                <option value="5">5 Lines</option>
+                                <option value="6">6 Lines</option>
+                                <option value="7">7 Lines</option>
+                                <option value="8">8 Lines</option>
+                                <option value="9">9 Lines</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cách bố trí Line:</label>
+                            <select id="cfg-arrangement" class="w-full p-2 border rounded bg-slate-50 font-medium"
+                                onchange="updateMultiLine()">
+                                <option value="vertical">Dọc 1 cột (Vertical Stack)</option>
+                                <option value="tree">Sơ đồ cây (3 Cột/Lớp)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hình thái Layout:</label>
+                            <select id="cfg-layout-type" class="w-full p-2 border rounded bg-slate-50 font-medium"
+                                onchange="updateMultiLine()">
+                                <option value="straight">Layout 1: Thẳng (Straight)</option>
+                                <option value="u_shape">Layout 2: Chữ U (U-Shape)</option>
+                                <option value="back_to_back">Layout 3: Đối Xứng (Back-to-Back)</option>
+                                <option value="circular">Layout 4: Đấu Trường (Circular)</option>
+                                <option value="c_shape">Layout 5: Chữ C (C-Shape)</option>
+                                <option value="square">Layout 6: Vuông (Square)</option>
+                                <option value="herringbone">Layout 7: Xương Cá (Herringbone)</option>
+                                <option value="inverted_u">Layout 8: Chữ U Úp (n-Shape)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách Line (m):</label>
+                            <input type="range" id="cfg-line-spacing" min="2" max="10" value="4" step="0.5"
+                                class="w-full" oninput="updateMultiLine()">
+                            <div class="text-right text-xs font-bold text-blue-600" id="disp-spacing">4m</div>
+                        </div>
+
+                        <!-- NEW: Warehouse Distance Input -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách Kho - Line
+                                (m):</label>
+                            <input type="range" id="cfg-wh-dist" min="5" max="100" value="20" step="1" class="w-full"
+                                oninput="updateMultiLine()">
+                            <div class="text-right text-xs font-bold text-orange-600" id="disp-wh-dist">20m</div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-100">
+                            <div class="text-xs text-gray-500">Trung bình quãng đường / SP</div>
+                            <div id="res-avg-dist" class="text-2xl font-bold text-blue-700">0.0 m</div>
+                            <div class="text-xs text-gray-400 mt-1">Tổng: <span id="res-total-dist">0</span> m</div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-100 text-xs text-gray-700">
+                            <h4 class="font-bold text-blue-800 mb-1">ℹ️ Công Thức Tính (Point-to-Point):</h4>
+                            <ul class="list-disc list-inside mt-1 ml-1 text-gray-600">
+                                <li><strong>1 Chuyến = 1 SP</strong> (Kho → Trạm → Kho).</li>
+                                <li>Tổng Quãng Đường = Σ (Khoảng cách từ Kho đến từng Trạm x 2).</li>
+                                <li>TB Quãng Đường = Tổng Quãng Đường / Số lượng Trạm.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mt-4">
+                            <canvas id="chartResults" height="150"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Algorithms Education Section -->
+                    <div id="algorithms-content" class="hidden">
+                        <h2 class="text-xl font-semibold mb-4">📚 Thuật Toán Đường Đi Kinh Điển</h2>
+                        <p class="text-sm text-gray-600 mb-4">Các phương pháp vận chuyển nội bộ nhà máy phổ biến:</p>
+
+                        <!-- Milk Run -->
+                        <div class="mb-4 border border-green-200 rounded-lg overflow-hidden">
+                            <button onclick="toggleAlgoCard('milkrun')"
+                                class="w-full p-3 bg-green-50 text-left font-semibold text-green-800 flex justify-between items-center hover:bg-green-100 transition-colors">
+                                <span>🥛 Milk Run (Vận chuyển vòng)</span>
+                                <span id="milkrun-icon" class="text-lg">+</span>
+                            </button>
+                            <div id="milkrun-details" class="hidden p-4 bg-white text-sm">
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">📜 Lịch sử:</h4>
+                                    <p class="text-gray-600">Xuất phát từ ngành giao sữa đầu thế kỷ 20. Người giao sữa
+                                        đi theo tuyến cố định, vừa giao sữa tươi vừa thu chai rỗng. Số chai rỗng là tín
+                                        hiệu nhu cầu ngày hôm sau.</p>
+                                </div>
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">⚙️ Nguyên lý:</h4>
+                                    <p class="text-gray-600">Một xe đi theo tuyến đường định sẵn, dừng tại nhiều điểm để
+                                        nhận/giao hàng trong cùng một chuyến. Thay thế việc mỗi nhà cung cấp giao riêng
+                                        lẻ.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-green-50 p-2 rounded"><b class="text-green-700">✅ Ưu
+                                            điểm:</b><br>Tiết kiệm chi phí vận chuyển, tối ưu JIT, giảm tồn kho</div>
+                                    <div class="bg-red-50 p-2 rounded"><b class="text-red-700">❌ Nhược điểm:</b><br>Cần
+                                        lịch trình ổn định, khó linh hoạt khi thay đổi</div>
+                                </div>
+                                <div class="mt-3 p-2 bg-gray-100 rounded text-center">
+                                    <svg width="280" height="80" viewBox="0 0 280 80" class="mx-auto">
+                                        <rect x="10" y="25" width="40" height="30" fill="#fcd34d" stroke="#d97706"
+                                            stroke-width="2" rx="3" />
+                                        <text x="30" y="43" font-size="8" text-anchor="middle" fill="#78350f">KHO</text>
+                                        <circle cx="80" cy="40" r="12" fill="#86efac" stroke="#16a34a"
+                                            stroke-width="2" />
+                                        <text x="80" y="43" font-size="8" text-anchor="middle">S1</text>
+                                        <circle cx="120" cy="40" r="12" fill="#86efac" stroke="#16a34a"
+                                            stroke-width="2" />
+                                        <text x="120" y="43" font-size="8" text-anchor="middle">S2</text>
+                                        <circle cx="160" cy="40" r="12" fill="#86efac" stroke="#16a34a"
+                                            stroke-width="2" />
+                                        <text x="160" y="43" font-size="8" text-anchor="middle">S3</text>
+                                        <circle cx="200" cy="40" r="12" fill="#86efac" stroke="#16a34a"
+                                            stroke-width="2" />
+                                        <text x="200" y="43" font-size="8" text-anchor="middle">S4</text>
+                                        <path d="M50 40 L68 40 M92 40 L108 40 M132 40 L148 40 M172 40 L188 40"
+                                            stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)" />
+                                        <path d="M200 28 Q230 10 230 40 Q230 70 50 55 L50 40" stroke="#16a34a"
+                                            stroke-width="2" stroke-dasharray="4" fill="none"
+                                            marker-end="url(#arrowGreen)" />
+                                        <defs>
+                                            <marker id="arrowGreen" markerWidth="6" markerHeight="6" refX="5" refY="3"
+                                                orient="auto">
+                                                <path d="M0,0 L0,6 L6,3 z" fill="#16a34a" />
+                                            </marker>
+                                        </defs>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mt-1">Xe đi theo vòng: Kho → S1 → S2 → S3 → S4 → Kho
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Point-to-Point -->
+                        <div class="mb-4 border border-blue-200 rounded-lg overflow-hidden">
+                            <button onclick="toggleAlgoCard('p2p')"
+                                class="w-full p-3 bg-blue-50 text-left font-semibold text-blue-800 flex justify-between items-center hover:bg-blue-100 transition-colors">
+                                <span>🎯 Point-to-Point (Điểm đến Điểm)</span>
+                                <span id="p2p-icon" class="text-lg">+</span>
+                            </button>
+                            <div id="p2p-details" class="hidden p-4 bg-white text-sm">
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">📜 Lịch sử:</h4>
+                                    <p class="text-gray-600">Phương pháp cơ bản nhất, xuất hiện từ khi có AGV đời đầu.
+                                        Xe được lệnh đi thẳng từ điểm A đến điểm B.</p>
+                                </div>
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">⚙️ Nguyên lý:</h4>
+                                    <p class="text-gray-600">Mỗi chuyến chỉ phục vụ 1 điểm. Xe nhận hàng từ Kho → Giao
+                                        đến 1 Trạm → Quay về Kho (thường không tải). Dùng thuật toán như Dijkstra, A* để
+                                        tìm đường ngắn nhất.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-green-50 p-2 rounded"><b class="text-green-700">✅ Ưu
+                                            điểm:</b><br>Linh hoạt cao, đáp ứng nhanh, dễ lập trình</div>
+                                    <div class="bg-red-50 p-2 rounded"><b class="text-red-700">❌ Nhược điểm:</b><br>Lãng
+                                        phí năng lượng lượt về, tổng quãng đường dài</div>
+                                </div>
+                                <div class="mt-3 p-2 bg-gray-100 rounded text-center">
+                                    <svg width="280" height="100" viewBox="0 0 280 100" class="mx-auto">
+                                        <rect x="10" y="35" width="40" height="30" fill="#fcd34d" stroke="#d97706"
+                                            stroke-width="2" rx="3" />
+                                        <text x="30" y="53" font-size="8" text-anchor="middle" fill="#78350f">KHO</text>
+                                        <circle cx="120" cy="20" r="12" fill="#93c5fd" stroke="#2563eb"
+                                            stroke-width="2" />
+                                        <text x="120" y="23" font-size="8" text-anchor="middle">S1</text>
+                                        <circle cx="180" cy="50" r="12" fill="#93c5fd" stroke="#2563eb"
+                                            stroke-width="2" />
+                                        <text x="180" y="53" font-size="8" text-anchor="middle">S2</text>
+                                        <circle cx="120" cy="80" r="12" fill="#93c5fd" stroke="#2563eb"
+                                            stroke-width="2" />
+                                        <text x="120" y="83" font-size="8" text-anchor="middle">S3</text>
+                                        <path d="M50 45 L108 22" stroke="#2563eb" stroke-width="2"
+                                            marker-end="url(#arrowBlue)" />
+                                        <path d="M108 22 L50 45" stroke="#94a3b8" stroke-width="1"
+                                            stroke-dasharray="3" />
+                                        <path d="M50 50 L168 50" stroke="#2563eb" stroke-width="2"
+                                            marker-end="url(#arrowBlue)" />
+                                        <path d="M168 50 L50 50" stroke="#94a3b8" stroke-width="1"
+                                            stroke-dasharray="3" />
+                                        <path d="M50 55 L108 78" stroke="#2563eb" stroke-width="2"
+                                            marker-end="url(#arrowBlue)" />
+                                        <path d="M108 78 L50 55" stroke="#94a3b8" stroke-width="1"
+                                            stroke-dasharray="3" />
+                                        <defs>
+                                            <marker id="arrowBlue" markerWidth="6" markerHeight="6" refX="5" refY="3"
+                                                orient="auto">
+                                                <path d="M0,0 L0,6 L6,3 z" fill="#2563eb" />
+                                            </marker>
+                                        </defs>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mt-1">Mỗi trạm = 1 chuyến riêng. Nét đứt = lượt về
+                                        không tải.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loop -->
+                        <div class="mb-4 border border-purple-200 rounded-lg overflow-hidden">
+                            <button onclick="toggleAlgoCard('loop')"
+                                class="w-full p-3 bg-purple-50 text-left font-semibold text-purple-800 flex justify-between items-center hover:bg-purple-100 transition-colors">
+                                <span>🔄 Loop (Vòng lặp cố định)</span>
+                                <span id="loop-icon" class="text-lg">+</span>
+                            </button>
+                            <div id="loop-details" class="hidden p-4 bg-white text-sm">
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">📜 Lịch sử:</h4>
+                                    <p class="text-gray-600">Phổ biến với hệ thống AGV đường dây dẫn (wire-guided) hoặc
+                                        băng từ. Xe chỉ chạy theo 1 đường cố định, không cần cảm biến phức tạp.</p>
+                                </div>
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">⚙️ Nguyên lý:</h4>
+                                    <p class="text-gray-600">Tất cả xe chạy trên 1 đường vòng khép kín, thường là một
+                                        chiều. Dừng tại các trạm theo lịch trình hoặc khi có tín hiệu.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-green-50 p-2 rounded"><b class="text-green-700">✅ Ưu điểm:</b><br>Đơn
+                                        giản, an toàn, không va chạm, dễ bảo trì</div>
+                                    <div class="bg-red-50 p-2 rounded"><b class="text-red-700">❌ Nhược điểm:</b><br>Kém
+                                        linh hoạt, nếu 1 xe hỏng có thể chặn cả tuyến</div>
+                                </div>
+                                <div class="mt-3 p-2 bg-gray-100 rounded text-center">
+                                    <svg width="200" height="120" viewBox="0 0 200 120" class="mx-auto">
+                                        <rect x="70" y="30" width="60" height="60" rx="10" fill="none" stroke="#a855f7"
+                                            stroke-width="4" />
+                                        <circle cx="70" cy="30" r="8" fill="#e9d5ff" stroke="#a855f7"
+                                            stroke-width="2" /><text x="70" y="33" font-size="7"
+                                            text-anchor="middle">S1</text>
+                                        <circle cx="130" cy="30" r="8" fill="#e9d5ff" stroke="#a855f7"
+                                            stroke-width="2" /><text x="130" y="33" font-size="7"
+                                            text-anchor="middle">S2</text>
+                                        <circle cx="130" cy="90" r="8" fill="#e9d5ff" stroke="#a855f7"
+                                            stroke-width="2" /><text x="130" y="93" font-size="7"
+                                            text-anchor="middle">S3</text>
+                                        <circle cx="70" cy="90" r="8" fill="#e9d5ff" stroke="#a855f7"
+                                            stroke-width="2" /><text x="70" y="93" font-size="7"
+                                            text-anchor="middle">S4</text>
+                                        <path d="M100 20 L110 30 L100 25 L90 30 Z" fill="#a855f7" />
+                                        <text x="100" y="15" font-size="8" text-anchor="middle" fill="#7e22ce">1
+                                            chiều</text>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mt-1">Xe chạy 1 chiều trên vòng kín. Layout 4, 5, 6
+                                        trong mô phỏng dùng kiểu này.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kanban -->
+                        <div class="mb-4 border border-orange-200 rounded-lg overflow-hidden">
+                            <button onclick="toggleAlgoCard('kanban')"
+                                class="w-full p-3 bg-orange-50 text-left font-semibold text-orange-800 flex justify-between items-center hover:bg-orange-100 transition-colors">
+                                <span>🏷️ Kanban Pull System</span>
+                                <span id="kanban-icon" class="text-lg">+</span>
+                            </button>
+                            <div id="kanban-details" class="hidden p-4 bg-white text-sm">
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">📜 Lịch sử:</h4>
+                                    <p class="text-gray-600">Được Toyota phát triển trong những năm 1950 như một phần
+                                        của Toyota Production System (TPS). "Kanban" tiếng Nhật có nghĩa là "bảng hiệu".
+                                    </p>
+                                </div>
+                                <div class="mb-3">
+                                    <h4 class="font-bold text-gray-800">⚙️ Nguyên lý:</h4>
+                                    <p class="text-gray-600">Hệ thống "kéo" (Pull): Chỉ bổ sung khi có tín hiệu tiêu thụ
+                                        (thẻ Kanban, thùng rỗng...). Kết hợp với Milk Run để tối ưu vận chuyển. Mô phỏng
+                                        của chúng ta sử dụng nguyên lý này: CTU chạy khi có yêu cầu từ trạm.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-green-50 p-2 rounded"><b class="text-green-700">✅ Ưu
+                                            điểm:</b><br>Giảm tồn kho, tránh sản xuất thừa, phát hiện lỗi nhanh</div>
+                                    <div class="bg-red-50 p-2 rounded"><b class="text-red-700">❌ Nhược điểm:</b><br>Cần
+                                        chuỗi cung ứng ổn định, nhạy cảm với biến động</div>
+                                </div>
+                                <div class="mt-3 p-2 bg-gray-100 rounded text-center">
+                                    <svg width="280" height="80" viewBox="0 0 280 80" class="mx-auto">
+                                        <rect x="10" y="25" width="40" height="30" fill="#fcd34d" stroke="#d97706"
+                                            stroke-width="2" rx="3" />
+                                        <text x="30" y="43" font-size="8" text-anchor="middle" fill="#78350f">KHO</text>
+                                        <rect x="80" y="25" width="30" height="30" fill="#fed7aa" stroke="#ea580c"
+                                            stroke-width="2" rx="3" />
+                                        <text x="95" y="38" font-size="6" text-anchor="middle">Thùng</text>
+                                        <text x="95" y="48" font-size="6" text-anchor="middle">Đầy</text>
+                                        <rect x="130" y="25" width="30" height="30" fill="#fef3c7" stroke="#eab308"
+                                            stroke-width="2" rx="3" />
+                                        <text x="145" y="38" font-size="6" text-anchor="middle">Thùng</text>
+                                        <text x="145" y="48" font-size="6" text-anchor="middle">1/2</text>
+                                        <rect x="180" y="25" width="30" height="30" fill="#fef9c3" stroke="#ca8a04"
+                                            stroke-width="2" rx="3" stroke-dasharray="3" />
+                                        <text x="195" y="38" font-size="6" text-anchor="middle">Thùng</text>
+                                        <text x="195" y="48" font-size="6" text-anchor="middle" fill="#dc2626"
+                                            font-weight="bold">Rỗng!</text>
+                                        <path d="M195 58 L195 70 L30 70 L30 58" stroke="#dc2626" stroke-width="2"
+                                            stroke-dasharray="4" fill="none" marker-end="url(#arrowRed)" />
+                                        <text x="112" y="78" font-size="7" text-anchor="middle" fill="#dc2626">Tín hiệu
+                                            Kanban: Bổ sung!</text>
+                                        <defs>
+                                            <marker id="arrowRed" markerWidth="6" markerHeight="6" refX="5" refY="3"
+                                                orient="auto">
+                                                <path d="M0,0 L0,6 L6,3 z" fill="#dc2626" />
+                                            </marker>
+                                        </defs>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mt-1">Khi thùng rỗng → Gửi tín hiệu → Kho mới bổ
+                                        sung.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 text-sm">
+                            <p class="text-indigo-800"><b>💡 Mẹo:</b> Trong thực tế, các nhà máy thường kết hợp nhiều
+                                phương pháp. Ví dụ: <b>Milk Run + Kanban</b> là sự kết hợp phổ biến nhất để vừa tiết
+                                kiệm chi phí vừa đảm bảo JIT.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-semibold text-gray-700">Trạng thái:</span>
+                            <span id="status-text" class="text-green-600 font-medium">Đang chạy mô phỏng...</span>
+                        </div>
+                        <div class="flex gap-4 text-sm">
+                            <div class="flex flex-wrap gap-4 text-sm">
+                                <div class="flex items-center"><span
+                                        class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>AGV (Mặt trước)</div>
+                                <div class="flex items-center"><span
+                                        class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>CTU (Mặt sau)</div>
+                                <div class="flex items-center"><span
+                                        class="w-6 h-0 border-t-2 border-orange-500 border-dashed mr-2"></span>Dòng
+                                    sản
+                                    phẩm (S1→S<span id="label-max-station">15</span>)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-3">Phân Tích Ưu/Nhược Điểm</h2>
+                    <div id="analysis-content" class="text-sm text-gray-700 space-y-3">
+                        <!-- Dynamic Content -->
+                    </div>
+
+                    <!-- 3D View Button - Only shown for Layout 4 -->
+                    <!-- 3D View Button - Only shown for Layout 4, 5, 6 -->
+                    <div id="view-3d-container" class="mt-4 pt-4 border-t border-gray-100 hidden">
+                        <button onclick="open3DView()"
+                            class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-700 transition-all flex items-center justify-center gap-2">
+                            <span class="text-xl">🎮</span>
+                            Xem Mô Phỏng 3D
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2 text-center">Mở trải nghiệm 3D tương tác với camera
+                            xoay
+                            360°</p>
+                    </div>
+
+                    <!-- Reference Image - Always Visible -->
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">📰 Tham khảo thực tế:</h3>
+                        <img id="ref-image" src="layout1_ref.png" alt="Mô phỏng thực tế Layout"
+                            class="w-full rounded-lg shadow border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onclick="window.open(this.src, '_blank')">
+                        <p class="text-xs text-gray-500 mt-2 italic">Hình ảnh minh họa ý tưởng layout trong thực tế
+                        </p>
+                    </div>
+
+                    <!-- Debug / Verification Tools -->
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <button onclick="verifyLayoutIntegrity()"
+                            class="text-xs text-gray-400 hover:text-red-500 underline">
+                            🛠️ Run Layout Verification
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization -->
+            <div class="w-full lg:w-2/3">
+                <div class="bg-white p-4 rounded-lg shadow-md relative">
+                    <canvas id="simCanvas" width="800" height="500" class="w-full h-auto rounded"></canvas>
+                    <div
+                        class="absolute top-6 right-6 bg-white/90 p-2 rounded text-xs text-gray-500 border border-gray-200">
+                        Tỷ lệ mô phỏng tương đối
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script src="assets/js/constants.js"></script>
+    <script src="assets/js/main.js"></script>
+
+</body>
+
+</html>

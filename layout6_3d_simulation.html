@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Layout 6 "Square Layout" (Hình Vuông)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 320px;
+            z-index: 100;
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eab308;
+            padding-bottom: 8px;
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+    <div class="ui-overlay">
+        <h1>🟦 Layout 6: Square Layout</h1>
+        <p>Bố trí hình vuông tương thích với kết cấu nhà xưởng. 15 trạm bố trí 4 cạnh. Kết nối song song từ 2 góc phải
+            về kho.</p>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6366f1;"></div><span>Trạm (Station)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e;"></div><span>Đường AGV (Ngoài)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3b82f6;"></div><span>Đường CTU (Trong)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fbbf24;"></div><span>Kho (Warehouse)</span>
+            </div>
+        </div>
+        <div class="controls-hint"><strong>Điều khiển:</strong><br>🖱️ Kéo chuột: Xoay camera<br>🔄 Cuộn chuột:
+            Zoom<br>➡️ Chuột phải: Di chuyển</div>
+    </div>
+    <div class="stats" id="stats">AGV: 0% | CTU: 0%</div>
+
+    <script>
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 40, 150);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(40, 50, 40);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+        const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c5c, 0.3);
+        scene.add(hemiLight);
+
+        // Ground
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshStandardMaterial({ color: 0x2a2a4a, roughness: 0.8, metalness: 0.2 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        const gridHelper = new THREE.GridHelper(100, 50, 0x444466, 0x333355);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // --- LAYOUT GEOMETRY ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const STATION_COUNT = parseInt(urlParams.get('stations')) || 15;
+
+        // Spread stations over 3 sides (Bottom, Left, Top)
+        const countSide = Math.ceil(STATION_COUNT / 3);
+        const STATION_W_TOTAL = 3.5; // Width + gap
+
+        // Calculate Box Size based on number of stations per side
+        const STATION_OFFSET = (countSide * STATION_W_TOTAL) / 2 + 2;
+
+        const AGV_SIZE = STATION_OFFSET + 4;
+        const CTU_SIZE = STATION_OFFSET - 4;
+        const WAREHOUSE_X = AGV_SIZE + 15;
+        const WAREHOUSE_Z_GAP = 5;
+
+        function createStraightTrack(start, end, color, width) {
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+            const geometry = new THREE.CylinderGeometry(width, width, length, 8);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const cylinder = new THREE.Mesh(geometry, material);
+            const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            cylinder.position.copy(center);
+            cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
+            cylinder.castShadow = true;
+            scene.add(cylinder);
+        }
+
+        // Points
+        // AGV Corners (Clockwise)
+        const agvTR = new THREE.Vector3(AGV_SIZE, 0.1, -AGV_SIZE);
+        const agvBR = new THREE.Vector3(AGV_SIZE, 0.1, AGV_SIZE);
+        const agvBL = new THREE.Vector3(-AGV_SIZE, 0.1, AGV_SIZE);
+        const agvTL = new THREE.Vector3(-AGV_SIZE, 0.1, -AGV_SIZE);
+
+        // CTU Corners (Clockwise)
+        const ctuTR = new THREE.Vector3(CTU_SIZE, 0.1, -CTU_SIZE);
+        const ctuBR = new THREE.Vector3(CTU_SIZE, 0.1, CTU_SIZE);
+        const ctuBL = new THREE.Vector3(-CTU_SIZE, 0.1, CTU_SIZE);
+        const ctuTL = new THREE.Vector3(-CTU_SIZE, 0.1, -CTU_SIZE);
+
+        // Warehouse Points
+        const whAgvTop = new THREE.Vector3(WAREHOUSE_X, 0.1, -6);
+        const whAgvBot = new THREE.Vector3(WAREHOUSE_X, 0.1, 6);
+        const whCtuTop = new THREE.Vector3(WAREHOUSE_X, 0.1, -2.5);
+        const whCtuBot = new THREE.Vector3(WAREHOUSE_X, 0.1, 2.5);
+
+        // Draw Tracks
+        // AGV Square
+        createStraightTrack(agvTR, agvBR, 0x22c55e, 0.6); // Right
+        createStraightTrack(agvBR, agvBL, 0x22c55e, 0.6); // Bottom
+        createStraightTrack(agvBL, agvTL, 0x22c55e, 0.6); // Left
+        createStraightTrack(agvTL, agvTR, 0x22c55e, 0.6); // Top
+
+        // CTU Square
+        createStraightTrack(ctuTR, ctuBR, 0x3b82f6, 0.5);
+        createStraightTrack(ctuBR, ctuBL, 0x3b82f6, 0.5);
+        createStraightTrack(ctuBL, ctuTL, 0x3b82f6, 0.5);
+        createStraightTrack(ctuTL, ctuTR, 0x3b82f6, 0.5);
+
+        // Connections
+        // AGV
+        createStraightTrack(agvTR, whAgvTop, 0x22c55e, 0.6);
+        createStraightTrack(agvBR, whAgvBot, 0x22c55e, 0.6);
+        // CTU
+        createStraightTrack(ctuTR, whCtuTop, 0x3b82f6, 0.5);
+        createStraightTrack(ctuBR, whCtuBot, 0x3b82f6, 0.5);
+
+        // Warehouse Mesh
+        const warehouseGeo = new THREE.BoxGeometry(8, 6, 15);
+        const warehouseMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24 });
+        const warehouse = new THREE.Mesh(warehouseGeo, warehouseMat);
+        warehouse.position.set(WAREHOUSE_X + 4, 3, 0);
+        warehouse.castShadow = true;
+        scene.add(warehouse);
+
+        // Stations
+        // Distribute 15 stations along the perimeter (4-3-4-4) box
+        // Perimeter Size = roughly square of size STATION_OFFSET*2 = 32x32
+        // Top Edge: (-16, -16) to (16, -16)
+        // Right Edge: (16, -16) to (16, 16)
+        // Bottom Edge: (16, 16) to (-16, 16)
+        // Left Edge: (-16, 16) to (-16, -16)
+
+        function createStation(x, z, rotY, label) {
+            const sGeo = new THREE.BoxGeometry(2, 2.5, 2);
+            const sMat = new THREE.MeshStandardMaterial({ color: 0x6366f1 });
+            const station = new THREE.Mesh(sGeo, sMat);
+            station.position.set(x, 1.25, z);
+            station.rotation.y = rotY;
+            station.castShadow = true;
+            scene.add(station);
+        }
+
+        const sizeS = STATION_OFFSET;
+
+        // Split stations logic
+        // We have 3 sides. Bottom -> Left -> Top
+        // If 15: 5, 5, 5
+        // If 16: 6, 5, 5 (or similar logic)
+
+        const countBot = Math.ceil(STATION_COUNT / 3);
+        const countLeft = Math.ceil((STATION_COUNT - countBot) / 2);
+        const countTop = STATION_COUNT - countBot - countLeft;
+
+        // --- 1. Bottom Side (countBot) ---
+        // Right (sizeS) to Left (-sizeS) along Bottom Edge (z = sizeS)
+        for (let i = 0; i < countBot; i++) {
+            // Map 0..(n-1) to range [sizeS-padding, -sizeS+padding]
+            // Length available = 2*sizeS. Step = (2*sizeS) / n
+            // Actually let's center them.
+            const span = (countBot - 1) * 3.5;
+            const startX = span / 2;
+            const x = startX - i * 3.5;
+            createStation(x, sizeS, Math.PI); // Face Inner
+        }
+
+        // --- 2. Left Side (countLeft) ---
+        // Bottom (sizeS) to Top (-sizeS) along Left Edge (x = -sizeS)
+        for (let i = 0; i < countLeft; i++) {
+            const span = (countLeft - 1) * 3.5;
+            const startZ = span / 2;
+            const z = startZ - i * 3.5;
+            createStation(-sizeS, z, Math.PI / 2); // Face Inner
+        }
+
+        // --- 3. Top Side (countTop) ---
+        // Left (-sizeS) to Right (sizeS) along Top Edge (z = -sizeS)
+        for (let i = 0; i < countTop; i++) {
+            const span = (countTop - 1) * 3.5;
+            const startX = -span / 2;
+            const x = startX + i * 3.5;
+            createStation(x, -sizeS, 0); // Face Inner
+        }
+
+        // Vehicles
+        function createVehicle(color, w, h, d) {
+            const geometry = new THREE.BoxGeometry(w, h, d);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.position.y = h / 2;
+            scene.add(mesh);
+            return mesh;
+        }
+        const agv = createVehicle(0x00ff00, 1.2, 0.8, 1.8);
+        const ctu = createVehicle(0x0000ff, 1.0, 0.7, 1.5);
+
+        // Logic Helper
+        function lerpVector(v1, v2, alpha) {
+            return new THREE.Vector3().lerpVectors(v1, v2, alpha);
+        }
+
+        // AGV Path Animation (CLOCKWISE: Bot -> Left -> Top)
+        // Path: WhBot -> BR -> BL -> TL -> TR -> WhTop -> WhBot
+        const agvPoints = [
+            whAgvBot, agvBR, agvBL, agvTL, agvTR, whAgvTop, whAgvBot
+        ];
+
+        // Calculate lengths for constant speed
+        const agvLengths = [];
+        let agvTotalLen = 0;
+        for (let i = 0; i < agvPoints.length - 1; i++) {
+            const d = agvPoints[i].distanceTo(agvPoints[i + 1]);
+            agvLengths.push(d);
+            agvTotalLen += d;
+        }
+
+        function getAgvPos(t) { // t 0..1
+            let d = t * agvTotalLen;
+            let cum = 0;
+            for (let i = 0; i < agvLengths.length; i++) {
+                if (d <= cum + agvLengths[i]) {
+                    const alpha = (d - cum) / agvLengths[i];
+                    return lerpVector(agvPoints[i], agvPoints[i + 1], alpha);
+                }
+                cum += agvLengths[i];
+            }
+            return agvPoints[agvPoints.length - 1];
+        }
+
+        // CTU Path Animation
+        // Path: WhBot -> BR -> BL -> TL -> TR -> WhTop -> WhBot
+        // Note: CTU usually enters near bottom and exits near top?
+        // Let's check 2D: Wh -> BR -> BL...
+        // 2D code: WhBot -> InnerBR ... -> InnerTR -> WhTop -> WhBot
+        const ctuPoints = [
+            whCtuBot, ctuBR, ctuBL, ctuTL, ctuTR, whCtuTop, whCtuBot
+        ];
+        const ctuLengths = [];
+        let ctuTotalLen = 0;
+        for (let i = 0; i < ctuPoints.length - 1; i++) {
+            const d = ctuPoints[i].distanceTo(ctuPoints[i + 1]);
+            ctuLengths.push(d);
+            ctuTotalLen += d;
+        }
+
+        function getCtuPos(t) {
+            let d = t * ctuTotalLen;
+            let cum = 0;
+            for (let i = 0; i < ctuLengths.length; i++) {
+                if (d <= cum + ctuLengths[i]) {
+                    const alpha = (d - cum) / ctuLengths[i];
+                    return lerpVector(ctuPoints[i], ctuPoints[i + 1], alpha);
+                }
+                cum += ctuLengths[i];
+            }
+            return ctuPoints[ctuPoints.length - 1];
+        }
+
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.002;
+
+            // Update AGV
+            const agvT = (time * 1.0) % 1;
+            const agvP = getAgvPos(agvT);
+            const agvNext = getAgvPos((agvT + 0.01) % 1);
+            agv.position.set(agvP.x, 0.4, agvP.z);
+            agv.lookAt(agvNext.x, 0.4, agvNext.z);
+
+            // Update CTU
+            const ctuT = (time * 0.8) % 1;
+            const ctuP = getCtuPos(ctuT);
+            const ctuNext = getCtuPos((ctuT + 0.01) % 1);
+            ctu.position.set(ctuP.x, 0.35, ctuP.z);
+            ctu.lookAt(ctuNext.x, 0.35, ctuNext.z);
+
+            document.getElementById('stats').innerText = `AGV: ${Math.round(agvT * 100)}% | CTU: ${Math.round(ctuT * 100)}%`;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>

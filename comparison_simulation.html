@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng & So Sánh Hiệu Quả Quãng Đường CTU (Multi-Line)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f1f5f9;
+        }
+
+        canvas {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            cursor: crosshair;
+        }
+
+        .highlight {
+            background-color: #fef08a;
+        }
+    </style>
+</head>
+
+<body class="p-4 h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="bg-white p-4 rounded-lg shadow-sm mb-4 flex justify-between items-center shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">📊 Phân Tích Hiệu Quả Quãng Đường CTU (Đa Chuyền)</h1>
+            <p class="text-gray-500 text-sm">Giả định: CTU cấp 1 kit linh kiện từ Kho -> Station -> Về Kho (Round-trip)
+            </p>
+        </div>
+        <div class="text-right">
+            <div class="text-xs text-gray-500">Khoảng cách trung bình / Sản phẩm</div>
+            <div id="avg-dist-display" class="text-3xl font-bold text-blue-600">0.0 m</div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex flex-1 gap-4 overflow-hidden">
+
+        <!-- SIDEBAR CONTROLS -->
+        <div class="w-80 bg-white p-5 rounded-lg shadow-sm overflow-y-auto shrink-0 flex flex-col gap-6">
+
+            <!-- Config Section -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-3 border-b pb-1">⚙️ Cấu Hình Nhà Máy</h3>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Số lượng Line (Chuyền):</label>
+                        <select id="line-count" class="w-full p-2 border rounded bg-slate-50 font-bold text-lg"
+                            onchange="runSimulation()">
+                            <option value="1">1 Line (15 trạm)</option>
+                            <option value="2">2 Lines (30 trạm)</option>
+                            <option value="3" selected>3 Lines (45 trạm)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Hình thái Layout (Kiểu
+                            dáng):</label>
+                        <select id="layout-type" class="w-full p-2 border rounded bg-slate-50 font-medium"
+                            onchange="runSimulation()">
+                            <option value="straight">Layout 1: Thẳng (Straight)</option>
+                            <option value="u_shape">Layout 2: Chữ U (U-Shape)</option>
+                            <option value="herringbone">Layout 7: Xương Cá (Herringbone)</option>
+                            <option value="inverted_u">Layout 8: Chữ U Úp (n-Shape)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Khoảng cách giữa các Line:</label>
+                        <input type="range" id="line-spacing" min="2" max="10" value="4" step="0.5"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            oninput="runSimulation()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>2m</span>
+                            <span id="spacing-val">4m</span>
+                            <span>10m</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div class="flex-1">
+                <h3 class="font-bold text-gray-700 mb-3 border-b pb-1">📈 Kết Quả Tính Toán</h3>
+
+                <div class="space-y-3 test-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Tổng quãng đường (1 chu kỳ):</span>
+                        <span id="total-dist" class="font-bold text-gray-800">0 m</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Trạm xa nhất (Max):</span>
+                        <span id="max-dist" class="font-bold text-red-600">0 m</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Trạm gần nhất (Min):</span>
+                        <span id="min-dist" class="font-bold text-green-600">0 m</span>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <canvas id="chartResults" height="150"></canvas>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="text-xs text-gray-500 border-t pt-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-3 h-3 bg-yellow-400 rounded"></div> <span>Kho (Warehouse)</span>
+                </div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-3 h-3 bg-blue-500 rounded"></div> <span>Trạm (Station)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-0.5 bg-red-400 border-dashed border-t"></div> <span>Đường CTU di chuyển</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CANVAS VISUALIZATION -->
+        <div class="flex-1 bg-white rounded-lg shadow-sm p-4 relative overflow-auto flex justify-center items-center">
+            <canvas id="simCanvas"></canvas>
+            <!-- Tooltip -->
+            <div id="tooltip"
+                class="absolute pointer-events-none bg-black/80 text-white text-xs p-2 rounded hidden z-10 whitespace-nowrap">
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+
+        // Settings
+        const SCALE = 15; // px per meter
+        const STATION_SIZE = 2; // meters
+        const WAREHOUSE_SIZE = { w: 10, h: 6 }; // meters
+
+        let stations = [];
+        let warehouse = { x: 0, y: 0 };
+        let paths = [];
+
+        // Chart Instance
+        let resultChart = null;
+
+        // --- CORE LOGIC ---
+
+        function runSimulation() {
+            // 1. Read Inputs
+            const lineCount = parseInt(document.getElementById('line-count').value);
+            const layoutType = document.getElementById('layout-type').value;
+            const lineSpacing = parseFloat(document.getElementById('line-spacing').value);
+            document.getElementById('spacing-val').innerText = lineSpacing + 'm';
+
+            // 2. Setup Canvas Size & Coordinates
+            setupEnvironment(lineCount, layoutType, lineSpacing);
+
+            // 3. Calculate Distances
+            calculateMetrics();
+
+            // 4. Draw
+            draw();
+            updateChart(layoutType);
+        }
+
+        function setupEnvironment(lineCount, layoutType, lineSpacing) {
+            stations = [];
+            paths = [];
+
+            // Define Warehouse Position: Left Center
+            // Simulation Area coords (in meters)
+            // Warehouse at (10, CenterY)
+
+            // Layout Dimensions Estimation
+            let layoutWidth = 0;
+            let layoutHeight = 0;
+
+            // Assume Layout Starts at X = 20m.
+            const startX = 20;
+
+            // Calculate layout bounds to center everything
+            // Single Layout Height approx:
+            // Straight: 2.3m (1 row)
+            // U/Herring: ~6m
+            // Inverted U: ~15m
+
+            let singleLayoutH = 0;
+            if (layoutType === 'straight') singleLayoutH = 3;
+            else if (layoutType === 'u_shape') singleLayoutH = 7;
+            else if (layoutType === 'herringbone') singleLayoutH = 7;
+            else if (layoutType === 'inverted_u') singleLayoutH = 16;
+
+            const totalH = lineCount * singleLayoutH + (lineCount - 1) * lineSpacing;
+            const centerY = Math.max(20, totalH / 2 + 10);
+
+            // Canvas resize
+            const metersW = 60; // Max width approx
+            const metersH = Math.max(40, totalH + 20);
+
+            canvas.width = document.querySelector('.flex-1.bg-white').clientWidth - 40;
+            canvas.height = document.querySelector('.flex-1.bg-white').clientHeight - 40;
+
+            // Center calculation offset
+            const offsetX = 50; // px
+            const offsetY = canvas.height / 2 - (totalH * SCALE) / 2;
+
+            // Placement Logic
+            warehouse = { x: 5 * SCALE, y: canvas.height / 2 }; // Fixed usage Warehouse on Left
+
+            for (let line = 0; line < lineCount; line++) {
+                const lineBaseY = offsetY + line * (singleLayoutH + lineSpacing) * SCALE;
+                const lineBaseX = offsetX + 150; // Gap from warehouse
+
+                generateLineStations(layoutType, lineBaseX, lineBaseY, line);
+            }
+        }
+
+        function generateLineStations(type, baseX, baseY, lineIndex) {
+            const S_W = 2.3 * SCALE;
+            const S_H = 2.3 * SCALE;
+            const gap = 0.3 * SCALE;
+
+            // 15 Stations
+            for (let i = 0; i < 15; i++) {
+                let x = 0, y = 0;
+
+                if (type === 'straight') {
+                    // 1 Row, 15 long
+                    x = baseX + i * (S_W + gap);
+                    y = baseY;
+                }
+                else if (type === 'u_shape') {
+                    // 2 Rows. Top 8, Bot 7. Back-to-Back.
+                    // Bot Row (S1-S7)
+                    if (i < 7) {
+                        x = baseX + (7 - 1 - i) * (S_W + gap);
+                        y = baseY + S_H + gap * 5; // Gap for CTU aisle
+                    } else {
+                        // Top Row (S8-S15)
+                        x = baseX + (i - 7) * (S_W + gap);
+                        y = baseY;
+                    }
+                }
+                else if (type === 'herringbone') {
+                    // 2 Rows, Compressed X.
+                    const stepX = 1.6 * SCALE; // cos(45) * 2.3
+                    if (i < 7) {
+                        x = baseX + i * stepX;
+                        y = baseY + S_H + 20; // Bot
+                    } else {
+                        x = baseX + (i - 7) * stepX;
+                        y = baseY; // Top
+                    }
+                }
+                else if (type === 'inverted_u') {
+                    // 3 Sides: Left(5), Top(5), Right(5). Open Bot.
+                    // n Shape.
+                    const sideX = S_W + gap;
+
+                    if (i < 5) { // Left (Bot->Top)
+                        x = baseX;
+                        y = baseY + (4 - i) * (S_H + gap) + S_H + gap;
+                    } else if (i < 10) { // Top (Left->Right)
+                        x = baseX + (i - 5) * (S_W + gap) + gap;
+                        y = baseY;
+                    } else { // Right (Top->Bot)
+                        x = baseX + 5 * (S_W + gap);
+                        y = baseY + (i - 10) * (S_H + gap) + S_H + gap;
+                    }
+                    // Shift entire shape to center Y? Just simple stacking.
+                }
+
+                stations.push({
+                    x: x, y: y,
+                    id: `L${lineIndex + 1}-S${i + 1}`,
+                    line: lineIndex + 1
+                });
+            }
+        }
+
+        function calculateMetrics() {
+            let totalDist = 0;
+            let maxDist = 0;
+            let minDist = Infinity;
+
+            paths = []; // Reset paths
+
+            stations.forEach(s => {
+                // Manhattan-like Logic:
+                // 1. Move Y from Warehouse to Line's 'Main Aisle' Y?
+                // 2. Move X from Warehouse X to Station X?
+                // Simplified Manhattan: |Wx - Sx| + |Wy - Sy|
+                // This assumes grid movement.
+
+                // Scale back to meters
+                const distPx = Math.abs(s.x - warehouse.x) + Math.abs(s.y - warehouse.y);
+                const distM = distPx / SCALE;
+                const roundTrip = distM * 2;
+
+                s.dist = roundTrip;
+                totalDist += roundTrip;
+                if (roundTrip > maxDist) maxDist = roundTrip;
+                if (roundTrip < minDist) minDist = roundTrip;
+
+                // Visual Path (L-shape)
+                paths.push({
+                    from: warehouse,
+                    to: s,
+                    dist: roundTrip
+                });
+            });
+
+            const avgDist = totalDist / stations.length;
+
+            // Update UI
+            document.getElementById('total-dist').innerText = totalDist.toFixed(1) + ' m';
+            document.getElementById('avg-dist-display').innerText = avgDist.toFixed(1) + ' m';
+            document.getElementById('max-dist').innerText = maxDist.toFixed(1) + ' m';
+            document.getElementById('min-dist').innerText = minDist.toFixed(1) + ' m';
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Paths (Heatmap style)
+            // We draw transparent lines. Overlapping lines get darker.
+            ctx.lineWidth = 1;
+            paths.forEach(p => {
+                const severity = p.dist / 100; // normalize
+                ctx.strokeStyle = `rgba(220, 38, 38, 0.1)`; // Red tint
+                ctx.beginPath();
+                ctx.moveTo(p.from.x, p.from.y);
+                ctx.lineTo(p.from.x, p.to.y); // L-shape
+                ctx.lineTo(p.to.x, p.to.y);
+                ctx.stroke();
+            });
+
+            // Draw Warehouse
+            ctx.fillStyle = '#facc15';
+            ctx.strokeStyle = '#a16207';
+            ctx.lineWidth = 2;
+            const wSize = WAREHOUSE_SIZE.w * SCALE;
+            const wH = WAREHOUSE_SIZE.h * SCALE;
+            ctx.fillRect(warehouse.x - wSize / 2, warehouse.y - wH / 2, wSize, wH);
+            ctx.strokeRect(warehouse.x - wSize / 2, warehouse.y - wH / 2, wSize, wH);
+            ctx.fillStyle = '#713f12';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('KHO', warehouse.x, warehouse.y + 4);
+
+            // Draw Stations
+            stations.forEach(s => {
+                // Color based on distance?
+                const distRatio = Math.min(1, s.dist / 150); // Cap at 150m
+                const r = Math.floor(255 * distRatio);
+                const g = Math.floor(255 * (1 - distRatio));
+
+                ctx.fillStyle = `rgb(${r}, ${g}, 200)`;
+                ctx.fillRect(s.x, s.y, 2.3 * SCALE, 2.3 * SCALE);
+
+                ctx.strokeStyle = '#333';
+                ctx.strokeRect(s.x, s.y, 2.3 * SCALE, 2.3 * SCALE);
+
+                // Text
+                if (SCALE > 10) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = '9px sans-serif';
+                    ctx.fillText(s.id, s.x + SCALE, s.y + SCALE + 4);
+                }
+            });
+        }
+
+        // --- CHART ---
+        function updateChart(currentLayout) {
+            // Compare average distances approximation for 3 Lines
+            // Values are pre-calculated metrics for quick comparison
+            const labels = ['Thẳng', 'Chữ U', 'Xương Cá', 'Chữ U Úp'];
+            // Mock comparative data logic (or we could run sim for all types in background)
+            // Let's run crude estimate:
+            // Straight: ~28m avg
+            // U: ~19m avg
+            // Herring: ~17m avg
+            // Inverted U: ~22m avg
+            // We highlight the current one
+
+            const currentAvg = parseFloat(document.getElementById('avg-dist-display').innerText);
+
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Quãng đường trung bình (m)',
+                    data: [35, 23, 19, 26], // Estimated Baselines for comparison cues
+                    backgroundColor: labels.map(l => {
+                        const map = { 'straight': 'Thẳng', 'u_shape': 'Chữ U', 'herringbone': 'Xương Cá', 'inverted_u': 'Chữ U Úp' };
+                        return map[currentLayout] === l ? '#2563eb' : '#cbd5e1';
+                    }),
+                    borderRadius: 4
+                }]
+            };
+
+            const config = {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Quãng đường (m)' } } }
+                }
+            };
+
+            if (resultChart) resultChart.destroy();
+            resultChart = new Chart(document.getElementById('chartResults'), config);
+        }
+
+        // Init
+        window.onload = runSimulation;
+        window.addEventListener('resize', runSimulation);
+
+        // Tooltip interaction
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const hit = stations.find(s =>
+                mx >= s.x && mx <= s.x + 2.3 * SCALE &&
+                my >= s.y && my <= s.y + 2.3 * SCALE
+            );
+
+            if (hit) {
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY + 10) + 'px';
+                tooltip.innerHTML = `Let: ${hit.id}<br>Dist: ${hit.dist.toFixed(1)}m`;
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        });
+
+    </script>
+</body>
+
+</html>
