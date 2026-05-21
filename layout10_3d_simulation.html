@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Đề án B bố trí 4 cụm cấp phát</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { overflow: hidden; font-family: "Segoe UI", Arial, sans-serif; background: linear-gradient(135deg, #f8fafc, #dbeafe); }
+        #container { width: 100vw; height: 100vh; }
+        .bang-thong-tin {
+            position: absolute; top: 20px; left: 20px; z-index: 10; width: 410px;
+            background: rgba(255,255,255,0.96); border: 1px solid #cbd5e1; border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(15,23,42,0.16); padding: 18px 20px;
+        }
+        .bang-thong-tin h1 { font-size: 20px; color: #0f172a; margin-bottom: 8px; }
+        .bang-thong-tin p { font-size: 13px; color: #475569; line-height: 1.5; }
+        .bang-thong-tin ul { margin-top: 10px; padding-left: 18px; color: #334155; font-size: 12px; line-height: 1.5; }
+        .huong-dan {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            background: rgba(15,23,42,0.88); color: #e2e8f0; border-radius: 12px; padding: 12px 14px;
+            font-size: 12px; line-height: 1.55;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div class="bang-thong-tin">
+        <h1>Đề án B - Bố trí 4 cụm cấp phát + OSS theo rủi ro</h1>
+        <p>Mô hình 3D chia rõ 4 cụm vận hành. Mỗi cụm có trạm K, điểm dừng, vùng OSS, giá Oricon/Hancon, đệm, hàng rỗng và mốc rủi ro để nhìn rõ luồng cấp phát thay vì chỉ thấy khối màu.</p>
+        <ul>
+            <li>R1: dễ nhầm, cần kiểm soát cao</li>
+            <li>R2: cần bộ đếm hoặc cân</li>
+            <li>R3: cần hình ảnh hoặc camera</li>
+            <li>R4: thao tác đơn giản hơn</li>
+        </ul>
+    </div>
+    <div class="huong-dan">Kéo chuột trái để xoay, cuộn để phóng to hoặc thu nhỏ, kéo chuột phải để tịnh tiến.</div>
+    <script>
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8fafc);
+        scene.fog = new THREE.Fog(0xf8fafc, 35, 140);
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(24, 25, 31);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById("container").appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
+        controls.maxPolarAngle = Math.PI / 2.06;
+        controls.minDistance = 18;
+        controls.maxDistance = 70;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const den = new THREE.DirectionalLight(0xffffff, 0.94);
+        den.position.set(24, 28, 18);
+        den.castShadow = true;
+        scene.add(den);
+
+        const nen = new THREE.Mesh(
+            new THREE.PlaneGeometry(50, 36),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.96 })
+        );
+        nen.rotation.x = -Math.PI / 2;
+        nen.receiveShadow = true;
+        scene.add(nen);
+        scene.add(new THREE.GridHelper(50, 25, 0xcbd5e1, 0xe2e8f0));
+
+        function taoHop(w, h, d, color) {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, d),
+                new THREE.MeshStandardMaterial({ color, roughness: 0.55 })
+            );
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function taoNhan(text, bg = "rgba(255,255,255,0.96)", fg = "#0f172a", w = 280) {
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = 64;
+            const c = canvas.getContext("2d");
+            c.fillStyle = bg;
+            c.fillRect(0, 0, canvas.width, canvas.height);
+            c.strokeStyle = "#cbd5e1";
+            c.lineWidth = 2;
+            c.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+            c.fillStyle = fg;
+            c.font = "bold 22px Segoe UI";
+            c.textAlign = "center";
+            c.textBaseline = "middle";
+            c.fillText(text, canvas.width / 2, canvas.height / 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+            sprite.scale.set(Math.max(4.2, w / 64), 1.0, 1);
+            return sprite;
+        }
+
+        function datNhan(parent, text, x, y, z, bg, fg, w) {
+            const nhan = taoNhan(text, bg, fg, w);
+            nhan.position.set(x, y, z);
+            parent.add(nhan);
+        }
+
+        const kho = taoHop(4.6, 3.2, 4.6, 0xfacc15);
+        kho.position.set(-18, 1.6, -12);
+        scene.add(kho);
+        datNhan(scene, "KHO", -18, 4.2, -12, "rgba(255,248,220,0.96)", "#78350f", 180);
+
+        const duong = taoHop(36, 0.3, 2.6, 0x93c5fd);
+        duong.position.set(2, 0.15, 11.8);
+        scene.add(duong);
+        datNhan(scene, "ĐƯỜNG CHUNG AGV-CTU-AMM", 2, 1.25, 14.0, "rgba(219,234,254,0.96)", "#1e40af", 340);
+
+        function taoCotMocRuiRo(text, x, z, color) {
+            const cot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.42, 20, 20),
+                new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.16 })
+            );
+            cot.position.set(x, 0.60, z);
+            scene.add(cot);
+            datNhan(scene, text, x, 1.55, z, "rgba(255,255,255,0.96)", "#111827", 120);
+        }
+
+        function taoCum(cx, cz, ten, moTa, fill, border, soTram) {
+            const nhom = new THREE.Group();
+            const nenCum = taoHop(15.2, 0.24, 7.0, fill);
+            nenCum.position.set(cx, 0.12, cz);
+            nhom.add(nenCum);
+
+            const khung = new THREE.LineSegments(
+                new THREE.EdgesGeometry(new THREE.BoxGeometry(15.4, 1.4, 7.2)),
+                new THREE.LineBasicMaterial({ color: border })
+            );
+            khung.position.set(cx, 0.8, cz);
+            nhom.add(khung);
+
+            for (let i = 0; i < soTram; i++) {
+                const tram = taoHop(1.2, 1.1, 1.1, 0x6ee7b7);
+                tram.position.set(cx - 5.7 + i * 2.5, 0.68, cz - 1.05);
+                nhom.add(tram);
+            }
+
+            const diemDung = taoHop(3.0, 0.34, 1.0, 0xfdba74);
+            diemDung.position.set(cx - 5.6, 0.20, cz + 1.5);
+            nhom.add(diemDung);
+            const gia = taoHop(2.2, 0.34, 0.8, 0x93c5fd);
+            gia.position.set(cx - 1.8, 0.22, cz + 1.5);
+            nhom.add(gia);
+            const rong = taoHop(2.1, 0.34, 0.8, 0xd1d5db);
+            rong.position.set(cx + 1.0, 0.22, cz + 1.5);
+            nhom.add(rong);
+            const dem = taoHop(1.8, 0.34, 0.8, 0xdbeafe);
+            dem.position.set(cx + 3.8, 0.22, cz + 1.5);
+            nhom.add(dem);
+            const oss = taoHop(1.8, 0.34, 0.7, 0xd8b4fe);
+            oss.position.set(cx - 5.5, 0.22, cz + 2.55);
+            nhom.add(oss);
+
+            for (let i = 0; i < 4; i++) {
+                const slot = taoHop(0.34, 0.24, 0.34, 0xfde68a);
+                slot.position.set(cx - 3.8 + i * 0.55, 0.2, cz + 2.55);
+                nhom.add(slot);
+            }
+
+            datNhan(nhom, ten, cx, 1.55, cz - 2.8, "rgba(255,255,255,0.96)", "#0f172a", 200);
+            datNhan(nhom, moTa, cx, 1.0, cz - 2.2, "rgba(255,255,255,0.96)", "#475569", 260);
+            datNhan(nhom, "ĐIỂM DỪNG", cx - 5.6, 0.9, cz + 1.5, "rgba(255,237,213,0.98)", "#9a3412", 180);
+            datNhan(nhom, "GIÁ ORI/HAN", cx - 1.8, 0.9, cz + 1.5, "rgba(219,234,254,0.98)", "#1e3a8a", 180);
+            datNhan(nhom, "HÀNG RỖNG", cx + 1.0, 0.9, cz + 1.5, "rgba(229,231,235,0.98)", "#374151", 180);
+            datNhan(nhom, "ĐỆM", cx + 3.8, 0.9, cz + 1.5, "rgba(219,234,254,0.98)", "#1d4ed8", 120);
+            datNhan(nhom, "OSS", cx - 5.5, 0.85, cz + 2.55, "rgba(243,232,255,0.98)", "#6b21a8", 100);
+            scene.add(nhom);
+        }
+
+        taoCum(-8, -6.8, "CỤM A", "K1-K5 | OSS mức cao", 0xfff1f2, 0xef4444, 5);
+        taoCum(8, -6.8, "CỤM B", "K6-K10 | Oricon / Cellcon", 0xfffbeb, 0xf59e0b, 5);
+        taoCum(-8, 2.4, "CỤM C", "K11-K15 | Sẵn sàng AMM", 0xfaf5ff, 0x8b5cf6, 5);
+        taoCum(8, 2.4, "CỤM D", "K16-K19 | Hoàn thiện / WIP", 0xecfeff, 0x14b8a6, 4);
+
+        taoCotMocRuiRo("R1", -1.0, -7.2, 0xef4444);
+        taoCotMocRuiRo("R2", 15.0, -7.2, 0xf97316);
+        taoCotMocRuiRo("R3", -1.0, 1.8, 0x8b5cf6);
+        taoCotMocRuiRo("R4", 15.0, 1.8, 0x9ca3af);
+
+        const agv = taoHop(1.1, 0.8, 0.9, 0x22c55e);
+        const ctu = taoHop(1.1, 0.8, 0.9, 0x3b82f6);
+        const amm = taoHop(1.1, 0.8, 0.9, 0xfb923c);
+        scene.add(agv, ctu, amm);
+        datNhan(agv, "AGV", 0, 1.0, 0, "rgba(236,253,245,0.96)", "#166534", 120);
+        datNhan(ctu, "CTU", 0, 1.0, 0, "rgba(219,234,254,0.96)", "#1e40af", 120);
+        datNhan(amm, "AMM", 0, 1.0, 0, "rgba(255,237,213,0.96)", "#9a3412", 120);
+
+        function noiSuy(a, b, t) { return a + (b - a) * t; }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            const t = (time * 0.00008) % 1;
+            agv.position.set(noiSuy(-16, 18, t), 0.7, 11.8);
+            ctu.position.set(noiSuy(-12, 16, (t + 0.28) % 1), 0.7, 11.8);
+            if (Math.sin(time * 0.0014) > 0.3) {
+                amm.position.set(-3.8, 0.7, 3.8);
+            } else {
+                amm.position.set(noiSuy(2, 11, (t + 0.58) % 1), 0.7, 11.8);
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate(0);
+
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

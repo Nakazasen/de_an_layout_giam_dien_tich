@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#eef6ff"/>
+  <rect x="70" y="70" width="1060" height="760" rx="28" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="110" y="130" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#0f172a">Đề án B - Bố trí 4 cụm cấp phát + OSS theo rủi ro</text>
+  <text x="110" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#475569">Minh họa ý tưởng thực tế: 4 cụm rõ ràng, mỗi cụm có điểm dừng, OSS, ô Cellcon, giá vào, hàng rỗng và vùng đệm</text>
+
+  <rect x="120" y="210" width="150" height="84" rx="14" fill="#fcd34d" stroke="#d97706" stroke-width="4"/>
+  <text x="195" y="258" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#78350f">KHO</text>
+
+  <path d="M180 720 H1030" stroke="#93c5fd" stroke-width="42" stroke-linecap="round"/>
+  <path d="M180 720 H1030" stroke="#1d4ed8" stroke-width="8" stroke-dasharray="10 10" stroke-linecap="round"/>
+  <text x="605" y="695" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#1e40af">ĐƯỜNG CHUNG AGV - CTU - AMM</text>
+
+  <g fill="#1d4ed8">
+    <polygon points="450,710 472,720 450,730"/>
+    <polygon points="700,710 722,720 700,730"/>
+    <polygon points="930,710 952,720 930,730"/>
+  </g>
+
+  <rect x="140" y="240" width="420" height="205" rx="20" fill="#fff1f2" stroke="#ef4444" stroke-width="4" stroke-dasharray="14 10"/>
+  <rect x="640" y="240" width="420" height="205" rx="20" fill="#fffbeb" stroke="#f59e0b" stroke-width="4" stroke-dasharray="14 10"/>
+  <rect x="140" y="475" width="420" height="205" rx="20" fill="#faf5ff" stroke="#8b5cf6" stroke-width="4" stroke-dasharray="14 10"/>
+  <rect x="640" y="475" width="420" height="205" rx="20" fill="#ecfeff" stroke="#14b8a6" stroke-width="4" stroke-dasharray="14 10"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">
+    <text x="165" y="278">Cụm A</text><text x="665" y="278">Cụm B</text><text x="165" y="513">Cụm C</text><text x="665" y="513">Cụm D</text>
+  </g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#475569">
+    <text x="165" y="308">K1-K5 | OSS mức cao</text>
+    <text x="665" y="308">K6-K10 | Oricon / Cellcon</text>
+    <text x="165" y="543">K11-K15 | Sẵn sàng AMM</text>
+    <text x="665" y="543">K16-K19 | Hoàn thiện / WIP</text>
+  </g>
+  <g fill="#fff" stroke-width="3">
+    <rect x="450" y="252" width="120" height="28" rx="10" fill="#fff" stroke="#ef4444"/><text x="510" y="271" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#991b1b">Thử lại</text>
+    <rect x="930" y="252" width="120" height="28" rx="10" fill="#fff" stroke="#f59e0b"/><text x="990" y="271" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#9a3412">Bộ đếm</text>
+    <rect x="430" y="487" width="160" height="28" rx="10" fill="#fff" stroke="#8b5cf6"/><text x="510" y="506" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#6b21a8">Camera / AMM</text>
+    <rect x="930" y="487" width="120" height="28" rx="10" fill="#fff" stroke="#14b8a6"/><text x="990" y="506" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#115e59">Kiểm tra</text>
+  </g>
+
+  <g fill="#d1fae5" stroke="#059669" stroke-width="3">
+    <rect x="170" y="336" width="52" height="52" rx="8"/><rect x="250" y="336" width="52" height="52" rx="8"/><rect x="330" y="336" width="52" height="52" rx="8"/><rect x="410" y="336" width="52" height="52" rx="8"/><rect x="490" y="336" width="52" height="52" rx="8"/>
+    <rect x="670" y="336" width="52" height="52" rx="8"/><rect x="750" y="336" width="52" height="52" rx="8"/><rect x="830" y="336" width="52" height="52" rx="8"/><rect x="910" y="336" width="52" height="52" rx="8"/><rect x="990" y="336" width="52" height="52" rx="8"/>
+    <rect x="170" y="571" width="52" height="52" rx="8"/><rect x="250" y="571" width="52" height="52" rx="8"/><rect x="330" y="571" width="52" height="52" rx="8"/><rect x="410" y="571" width="52" height="52" rx="8"/><rect x="490" y="571" width="52" height="52" rx="8"/>
+    <rect x="670" y="571" width="52" height="52" rx="8"/><rect x="750" y="571" width="52" height="52" rx="8"/><rect x="830" y="571" width="52" height="52" rx="8"/><rect x="910" y="571" width="52" height="52" rx="8"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#065f46" text-anchor="middle">
+    <text x="196" y="368">K1</text><text x="276" y="368">K2</text><text x="356" y="368">K3</text><text x="436" y="368">K4</text><text x="516" y="368">K5</text>
+    <text x="696" y="368">K6</text><text x="776" y="368">K7</text><text x="856" y="368">K8</text><text x="936" y="368">K9</text><text x="1016" y="368">K10</text>
+    <text x="196" y="603">K11</text><text x="276" y="603">K12</text><text x="356" y="603">K13</text><text x="436" y="603">K14</text><text x="516" y="603">K15</text>
+    <text x="696" y="603">K16</text><text x="776" y="603">K17</text><text x="856" y="603">K18</text><text x="936" y="603">K19</text>
+  </g>
+
+  <g>
+    <rect x="165" y="405" width="108" height="24" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="3"/><text x="219" y="422" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#9a3412">Điểm dừng A</text>
+    <rect x="285" y="405" width="70" height="24" rx="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+    <rect x="365" y="405" width="84" height="24" rx="8" fill="#d1d5db" stroke="#6b7280" stroke-width="3"/>
+    <rect x="459" y="405" width="82" height="24" rx="8" fill="#dbeafe" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="165" y="436" width="56" height="18" rx="7" fill="#ede9fe" stroke="#a855f7" stroke-width="2"/>
+    <rect x="231" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="253" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="275" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="297" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/>
+  </g>
+  <g>
+    <rect x="665" y="405" width="108" height="24" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="3"/><text x="719" y="422" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#9a3412">Điểm dừng B</text>
+    <rect x="785" y="405" width="70" height="24" rx="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+    <rect x="865" y="405" width="84" height="24" rx="8" fill="#d1d5db" stroke="#6b7280" stroke-width="3"/>
+    <rect x="959" y="405" width="82" height="24" rx="8" fill="#dbeafe" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="665" y="436" width="56" height="18" rx="7" fill="#ede9fe" stroke="#a855f7" stroke-width="2"/>
+    <rect x="731" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="753" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="775" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="797" y="438" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/>
+  </g>
+  <g>
+    <rect x="165" y="640" width="108" height="24" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="3"/><text x="219" y="657" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#9a3412">Điểm dừng C</text>
+    <rect x="285" y="640" width="70" height="24" rx="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+    <rect x="365" y="640" width="84" height="24" rx="8" fill="#d1d5db" stroke="#6b7280" stroke-width="3"/>
+    <rect x="459" y="640" width="82" height="24" rx="8" fill="#dbeafe" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="165" y="671" width="56" height="18" rx="7" fill="#ede9fe" stroke="#a855f7" stroke-width="2"/>
+    <rect x="231" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="253" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="275" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="297" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/>
+  </g>
+  <g>
+    <rect x="665" y="640" width="108" height="24" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="3"/><text x="719" y="657" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#9a3412">Điểm dừng D</text>
+    <rect x="785" y="640" width="70" height="24" rx="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+    <rect x="865" y="640" width="84" height="24" rx="8" fill="#d1d5db" stroke="#6b7280" stroke-width="3"/>
+    <rect x="959" y="640" width="82" height="24" rx="8" fill="#dbeafe" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="665" y="671" width="56" height="18" rx="7" fill="#ede9fe" stroke="#a855f7" stroke-width="2"/>
+    <rect x="731" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="753" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="775" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/><rect x="797" y="673" width="16" height="16" rx="6" fill="#fde68a" stroke="#eab308" stroke-width="2"/>
+  </g>
+
+  <g>
+    <circle cx="494" cy="350" r="16" fill="#ef4444"/><text x="494" y="356" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#fff">R1</text>
+    <circle cx="994" cy="350" r="16" fill="#f97316"/><text x="994" y="356" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#fff">R2</text>
+    <circle cx="494" cy="585" r="16" fill="#8b5cf6"/><text x="494" y="591" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#fff">R3</text>
+    <circle cx="994" cy="585" r="16" fill="#9ca3af"/><text x="994" y="591" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">R4</text>
+  </g>
+
+  <rect x="874" y="700" width="42" height="30" rx="8" fill="#22c55e" stroke="#16a34a" stroke-width="3"/>
+  <rect x="954" y="700" width="42" height="30" rx="8" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
+  <rect x="1034" y="674" width="42" height="30" rx="8" fill="#fb923c" stroke="#ea580c" stroke-width="3"/>
+  <text x="895" y="692" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#166534">AGV</text>
+  <text x="975" y="692" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e40af">CTU</text>
+  <text x="1055" y="666" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#9a3412">AMM</text>
+</svg>

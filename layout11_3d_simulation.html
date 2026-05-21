@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng 3D - Đề án C hai chuyền chung đường giữa</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { overflow: hidden; font-family: "Segoe UI", Arial, sans-serif; background: linear-gradient(135deg, #eff6ff, #f8fafc); }
+        #container { width: 100vw; height: 100vh; }
+        .bang-thong-tin {
+            position: absolute; top: 20px; left: 20px; z-index: 10; width: 430px;
+            background: rgba(255,255,255,0.96); border: 1px solid #cbd5e1; border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(15,23,42,0.16); padding: 18px 20px;
+        }
+        .bang-thong-tin h1 { font-size: 20px; color: #0f172a; margin-bottom: 8px; }
+        .bang-thong-tin p { font-size: 13px; color: #475569; line-height: 1.5; }
+        .bang-thong-tin ul { margin-top: 10px; padding-left: 18px; color: #334155; font-size: 12px; line-height: 1.5; }
+        .huong-dan {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            background: rgba(15,23,42,0.88); color: #e2e8f0; border-radius: 12px; padding: 12px 14px;
+            font-size: 12px; line-height: 1.55;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div class="bang-thong-tin">
+        <h1>Đề án C - Hai chuyền chung đường giữa + Cụm Cellcon phân tán</h1>
+        <p>Mô hình 3D thể hiện 2 chuyền song song cùng dùng một đường AGV-CTU-AMM ở giữa. Bốn cụm Cellcon được phân tán dọc tuyến, mỗi cụm có đầu vào Oricon/Hancon, OSS, vùng đệm, hàng rỗng và hai hốc dừng riêng cho FUSER và chuyền khác.</p>
+        <ul>
+            <li>Làn chính không dừng</li>
+            <li>Xe chỉ dừng trong hốc dừng</li>
+            <li>Ưu tiên cụm có vùng đệm thấp hơn khi gọi cùng lúc</li>
+        </ul>
+    </div>
+    <div class="huong-dan">Kéo chuột trái để xoay, cuộn để phóng to hoặc thu nhỏ, kéo chuột phải để tịnh tiến.</div>
+    <script>
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8fafc);
+        scene.fog = new THREE.Fog(0xf8fafc, 38, 150);
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(26, 24, 34);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById("container").appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
+        controls.maxPolarAngle = Math.PI / 2.06;
+        controls.minDistance = 20;
+        controls.maxDistance = 80;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+        const den = new THREE.DirectionalLight(0xffffff, 0.96);
+        den.position.set(26, 30, 18);
+        den.castShadow = true;
+        scene.add(den);
+
+        const nen = new THREE.Mesh(
+            new THREE.PlaneGeometry(54, 38),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.96 })
+        );
+        nen.rotation.x = -Math.PI / 2;
+        nen.receiveShadow = true;
+        scene.add(nen);
+        scene.add(new THREE.GridHelper(54, 27, 0xcbd5e1, 0xe2e8f0));
+
+        function taoHop(w, h, d, color) {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, d),
+                new THREE.MeshStandardMaterial({ color, roughness: 0.55 })
+            );
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function taoNhan(text, bg = "rgba(255,255,255,0.96)", fg = "#0f172a", w = 300) {
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = 64;
+            const c = canvas.getContext("2d");
+            c.fillStyle = bg;
+            c.fillRect(0, 0, canvas.width, canvas.height);
+            c.strokeStyle = "#cbd5e1";
+            c.lineWidth = 2;
+            c.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+            c.fillStyle = fg;
+            c.font = "bold 21px Segoe UI";
+            c.textAlign = "center";
+            c.textBaseline = "middle";
+            c.fillText(text, canvas.width / 2, canvas.height / 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+            sprite.scale.set(Math.max(4.4, w / 64), 1.0, 1);
+            return sprite;
+        }
+
+        function datNhan(parent, text, x, y, z, bg, fg, w) {
+            const nhan = taoNhan(text, bg, fg, w);
+            nhan.position.set(x, y, z);
+            parent.add(nhan);
+        }
+
+        const kho = taoHop(4.6, 3.2, 4.4, 0xfacc15);
+        kho.position.set(-20, 1.6, 0);
+        scene.add(kho);
+        datNhan(scene, "KHO", -20, 4.2, 0, "rgba(255,248,220,0.96)", "#78350f", 160);
+
+        const duong = new THREE.Group();
+        [
+            { x: 0, z: -2.2, w: 36, d: 1.6 },
+            { x: 0, z: 2.2, w: 36, d: 1.6 },
+            { x: -18, z: 0, w: 1.6, d: 4.4 },
+            { x: 18, z: 0, w: 1.6, d: 4.4 }
+        ].forEach(seg => {
+            const phan = taoHop(seg.w, 0.25, seg.d, 0x93c5fd);
+            phan.position.set(seg.x, 0.13, seg.z);
+            duong.add(phan);
+        });
+        scene.add(duong);
+        datNhan(scene, "ĐƯỜNG CHUNG AGV-CTU-AMM - 1 CHIỀU", 0, 1.15, 0, "rgba(219,234,254,0.96)", "#1e40af", 380);
+
+        function taoTramHang(prefix, soLuong, startX, z, color, strokeColor) {
+            const nhom = new THREE.Group();
+            for (let i = 0; i < soLuong; i++) {
+                const tram = taoHop(1.0, 0.95, 0.95, color);
+                tram.position.set(startX + i * 1.7, 0.55, z);
+                nhom.add(tram);
+                if (i < 3 || i > soLuong - 3) {
+                    datNhan(nhom, `${prefix}${i + 1}`, startX + i * 1.7, 1.35, z, "rgba(255,255,255,0.96)", strokeColor, 120);
+                }
+            }
+            scene.add(nhom);
+        }
+
+        taoTramHang("K", 19, -14.8, -8.0, 0x6ee7b7, "#065f46");
+        taoTramHang("U", 15, -11.2, 8.2, 0x99f6e4, "#134e4a");
+        datNhan(scene, "FUSER 19K", -19, 1.25, -8.0, "rgba(236,253,245,0.96)", "#166534", 180);
+        datNhan(scene, "UNIT KHÁC / CHUYỀN TƯƠNG LAI", -16, 1.25, 8.2, "rgba(240,253,250,0.96)", "#0f766e", 280);
+
+        function taoHub(x, ten, moTa) {
+            const hub = new THREE.Group();
+            const than = taoHop(4.8, 0.35, 3.2, 0xfef3c7);
+            than.position.set(x, 0.18, 0);
+            hub.add(than);
+
+            const tren = taoHop(4.8, 0.28, 0.8, 0xfdba74);
+            tren.position.set(x, 0.22, -2.2);
+            hub.add(tren);
+            const duoi = taoHop(4.8, 0.28, 0.8, 0xfdba74);
+            duoi.position.set(x, 0.22, 2.2);
+            hub.add(duoi);
+            const gia = taoHop(4.0, 0.28, 0.55, 0x93c5fd);
+            gia.position.set(x, 0.22, -0.9);
+            hub.add(gia);
+            const oss = taoHop(1.1, 0.26, 0.55, 0xd8b4fe);
+            oss.position.set(x - 1.5, 0.20, 0.1);
+            hub.add(oss);
+            const dem = taoHop(1.2, 0.26, 0.55, 0xdbeafe);
+            dem.position.set(x, 0.20, 0.1);
+            hub.add(dem);
+            const rong = taoHop(1.2, 0.26, 0.55, 0xd1d5db);
+            rong.position.set(x + 1.5, 0.20, 0.1);
+            hub.add(rong);
+            for (let i = 0; i < 6; i++) {
+                const o = taoHop(0.28, 0.22, 0.28, 0xfacc15);
+                o.position.set(x - 1.6 + i * 0.56, 0.18, 1.15);
+                hub.add(o);
+            }
+
+            datNhan(hub, ten, x, 1.4, -3.7, "rgba(254,249,195,0.96)", "#92400e", 170);
+            datNhan(hub, moTa, x, 0.95, -3.1, "rgba(255,255,255,0.96)", "#475569", 220);
+            datNhan(hub, "DỪNG FUSER", x, 0.92, -2.2, "rgba(255,237,213,0.96)", "#9a3412", 170);
+            datNhan(hub, "DỪNG UNIT", x, 0.92, 2.2, "rgba(255,237,213,0.96)", "#9a3412", 150);
+            datNhan(hub, "ĐẦU VÀO ORI/HAN", x, 0.86, -0.9, "rgba(219,234,254,0.96)", "#1e3a8a", 220);
+            datNhan(hub, "OSS", x - 1.5, 0.78, 0.1, "rgba(243,232,255,0.98)", "#6b21a8", 100);
+            datNhan(hub, "ĐỆM", x, 0.78, 0.1, "rgba(219,234,254,0.98)", "#1d4ed8", 100);
+            datNhan(hub, "RỖNG", x + 1.5, 0.78, 0.1, "rgba(229,231,235,0.98)", "#374151", 100);
+            scene.add(hub);
+        }
+
+        taoHub(-10.8, "CỤM A", "K1-K5 / U1-U4");
+        taoHub(-3.6, "CỤM B", "K6-K10 / U5-U8");
+        taoHub(3.6, "CỤM C", "K11-K15 / U9-U12");
+        taoHub(10.8, "CỤM D", "K16-K19 / U13-U15");
+
+        datNhan(scene, "Không dừng trên làn chính", 12.0, 1.2, -4.8, "rgba(254,242,242,0.96)", "#b91c1c", 260);
+        datNhan(scene, "Chỉ dừng trong hốc dừng", 12.0, 0.9, -4.0, "rgba(254,242,242,0.96)", "#b91c1c", 240);
+
+        const agv = taoHop(1.1, 0.8, 0.9, 0x22c55e);
+        const ctu = taoHop(1.1, 0.8, 0.9, 0x3b82f6);
+        const amm1 = taoHop(1.0, 0.8, 0.9, 0xfb923c);
+        const amm2 = taoHop(1.0, 0.8, 0.9, 0xfb923c);
+        scene.add(agv, ctu, amm1, amm2);
+        datNhan(agv, "AGV", 0, 1.0, 0, "rgba(236,253,245,0.96)", "#166534", 120);
+        datNhan(ctu, "CTU", 0, 1.0, 0, "rgba(219,234,254,0.96)", "#1e40af", 120);
+        datNhan(amm1, "AMM1", 0, 1.0, 0, "rgba(255,237,213,0.96)", "#9a3412", 130);
+        datNhan(amm2, "AMM2", 0, 1.0, 0, "rgba(255,237,213,0.96)", "#9a3412", 130);
+
+        const duongVong = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(-18, 0.5, -2.2),
+            new THREE.Vector3(18, 0.5, -2.2),
+            new THREE.Vector3(18, 0.5, 2.2),
+            new THREE.Vector3(-18, 0.5, 2.2),
+            new THREE.Vector3(-18, 0.5, -2.2)
+        ], true, "catmullrom", 0.0001);
+
+        function diemTrenDuong(t) {
+            return duongVong.getPointAt((t % 1 + 1) % 1);
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            const t = time * 0.000035;
+            agv.position.copy(diemTrenDuong(t + 0.08));
+            ctu.position.copy(diemTrenDuong(t + 0.36));
+            amm1.position.set(-14.8, 0.75, 0);
+            amm2.position.copy(diemTrenDuong(t + 0.62));
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate(0);
+
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

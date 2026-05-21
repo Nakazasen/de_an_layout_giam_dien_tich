@@ -1,4 +1,4 @@
-console.log("main.js script file loaded.");
+﻿console.log("main.js script file loaded.");
 // --- Global Variables & Constants ---
 let canvas, ctx;
 let STATION_COUNT = 19;
@@ -13,16 +13,11 @@ let isComparisonMode = false;
 let isAlgorithmsMode = false;
 let agvPos = { x: 0, y: 0, progress: 0 };
 let ctuPos = { x: 0, y: 0, progress: 0 };
+let ammPos = { x: 0, y: 0, progress: 0 };
+const SCHEME9_STATION_COUNT = 19;
 
-// --- CRITICAL: Global Function Exposure ---
-// We explicitly expose these to window because HTML onclick handlers need them.
-window.setScheme = (id) => { if (typeof setScheme === 'function') setScheme(id); };
-window.updateStationCount = () => { if (typeof updateStationCount === 'function') updateStationCount(); };
-window.syncStationInputs = (val) => { if (typeof syncStationInputs === 'function') syncStationInputs(val); };
-window.switchMode = (mode) => { if (typeof switchMode === 'function') switchMode(mode); };
-window.toggleAlgoCard = (id) => { if (typeof toggleAlgoCard === 'function') toggleAlgoCard(id); };
-window.open3DView = () => { if (typeof open3DView === 'function') open3DView(); };
-window.verifyLayoutIntegrity = () => { if (typeof verifyLayoutIntegrity === 'function') verifyLayoutIntegrity(); };
+// HTML inline onclick cﾃｳ th盻・g盻絞 tr盻ｱc ti蘯ｿp cﾃ｡c function declaration bﾃｪn dﾆｰ盻嬖.
+// Khﾃｴng c蘯ｧn wrap l蘯｡i qua window, n蘯ｿu khﾃｴng s蘯ｽ d盻・gﾃ｢y ﾄ黛ｻ・quy vﾃｴ h蘯｡n.
 
 // Dynamic station sizing to fit canvas
 function getStationSize() {
@@ -81,157 +76,263 @@ const schemes = {
     1: {
         name: "Layout Thẳng (Tối ưu dòng chảy)",
         pros: [
-            "<b>Dễ triển khai & Quản lý:</b> Luồng hàng đi thẳng (một chiều) giúp quản lý trực quan, dễ phát hiện điểm tắc nghẽn.",
-            "<b>An toàn cao:</b> Tách biệt hoàn toàn luồng xe AGV (mặt trước) và CTU (mặt sau), không có giao cắt nguy hiểm.",
-            "<b>Chuẩn hóa cao:</b> Dễ dàng nhân rộng sang các nhà máy khác, không phụ thuộc vào hình dạng kho xưởng đặc thù."
+            "<b>Dễ triển khai:</b> Dòng vật tư đi thẳng, dễ nhìn và dễ tổ chức vận hành.",
+            "<b>An toàn cao:</b> Luồng AGV phía trước và CTU phía sau tách rõ, ít giao cắt.",
+            "<b>Dễ nhân rộng:</b> Phù hợp làm chuẩn so sánh cho các line tương tự."
         ],
         cons: [
-            "<b>Hiệu suất vận chuyển thấp:</b> Xe AGV/CTU phải chạy quãng đường 'không tải' (lượt về) rất dài -> Lãng phí năng lượng và thời gian.",
-            "<b>Lãng phí không gian chết:</b> Layout tạo ra hình chữ nhật dài, khó tận dụng diện tích thừa ở 2 bên trong nhà xưởng vuông.",
-            "<b>Khó cân bằng chuyền:</b> Người thao tác ở đầu và cuối chuyền cách nhau xa, khó hỗ trợ chéo khi cần thiết."
+            "<b>Tốn chiều dài:</b> Cần mặt bằng dài nếu số trạm tăng nhiều.",
+            "<b>Quãng chạy rỗng lớn:</b> Xe quay đầu và hồi tuyến dễ phát sinh lãng phí.",
+            "<b>Ít linh hoạt nhân sự:</b> Hai đầu chuyền cách xa nhau, khó hỗ trợ chéo."
         ],
         dims: "34.5m x 3.5m",
         area: "120.8",
-        areaNote: "Chuẩn cơ sở so sánh.",
+        areaNote: "Phương án chuẩn để so sánh với các bố trí khác.",
         image: "layout1_ref.png",
         formula: "Dài = Số trạm × 1.8m | Rộng = 3.5m"
     },
     2: {
         name: "Layout Chữ U (Tiết kiệm diện tích)",
         pros: [
-            "<b>Tối ưu diện tích:</b> Tận dụng tối đa không gian, phù hợp xưởng ngắn. Giúp 'gấp gọn' dây chuyền.",
-            "<b>Linh hoạt nhân sự:</b> Điểm đầu và cuối gần nhau, 1 người có thể quản lý cả 2 đầu, nhân viên dễ dàng hỗ trợ chéo.",
-            "<b>Tăng tần suất cấp hàng:</b> Quãng đường xe di chuyển ngắn hơn so với đường thẳng, tăng số lượt phục vụ của AGV."
+            "<b>Rút ngắn mặt bằng:</b> Gập chuyền lại giúp giảm chiều dài tổng thể.",
+            "<b>Thuận lợi hỗ trợ chéo:</b> Đầu vào và đầu ra gần nhau hơn.",
+            "<b>Tăng tốc độ tiếp liệu:</b> Quãng đường cấp phát ngắn hơn layout thẳng."
         ],
         cons: [
-            "<b>Rủi ro góc cua:</b> Các bộ phận chuyển hướng tại góc Chữ U thường phức tạp, dễ kẹt hàng và khó bảo trì hơn đoạn thẳng.",
-            "<b>Nguy cơ tắc nghẽn cục bộ:</b> Nếu xe AGV đi vào lòng trong chữ U, không gian sẽ rất chật hẹp, khó xử lý khi có sự cố.",
-            "<b>Khó mở rộng:</b> Muốn thêm máy (Station) phải phá vỡ cấu trúc chữ U hiện tại, tốn kém chi phí cải tạo."
+            "<b>Nhạy với góc cua:</b> Điểm chuyển hướng dễ trở thành nơi chậm xe.",
+            "<b>Dễ nghẽn cục bộ:</b> Nếu làn trong hẹp, xử lý sự cố sẽ khó hơn.",
+            "<b>Khó mở rộng:</b> Thêm trạm thường phải phá lại cấu trúc hiện có."
         ],
         dims: "19.5m x 7.0m",
         area: "136.5",
-        areaNote: "Diện tích tăng do cần lối đi nội bộ rộng hơn cho cua quay.",
+        areaNote: "Cần chừa đủ bề rộng cho xe quay và thao tác ở phần đáy chữ U.",
         image: "layout2_ref.png",
-        formula: "Dài = (Số trạm/2) × 1.8m + góc quay | Rộng = 7.0m"
+        formula: "Dài = (Số trạm / 2) × 1.8m + vùng quay | Rộng = 7.0m"
     },
     3: {
         name: "Layout Đối Xứng (Sử dụng chung lưng)",
         pros: [
-            "<b>Mật độ máy cao nhất:</b> Dùng chung 1 làn đường CTU ở giữa cho 2 hàng máy -> Giảm 40% diện tích lối đi.",
-            "<b>Tiết kiệm chi phí kết cấu:</b> Thiết kế khung máy chung lưng, đi chung đường điện/khí nén trục chính.",
-            "<b>Hiệu suất cấp hàng x2:</b> Xe CTU chạy 1 đường ở giữa phục vụ được cùng lúc cho cả 2 bên."
+            "<b>Giảm diện tích lối đi:</b> Hai dãy dùng chung khu sau lưng và đường cấp phát.",
+            "<b>Tăng hiệu quả CTU:</b> Một tuyến sau có thể phục vụ đồng thời hai bên.",
+            "<b>Khai thác mặt bằng tốt:</b> Phù hợp khi cần nén chiều rộng."
         ],
         cons: [
-            "<b>Khó khăn bảo trì:</b> Rất khó tiếp cận thiết bị ở làn giữa (CTU/băng tải) để sửa chữa. Nếu hỏng có thể phải dừng cả 2 hàng máy.",
-            "<b>Rủi ro dây chuyền:</b> Sự cố ở làn giữa sẽ làm tê liệt đồng thời cả 2 hàng máy.",
-            "<b>An toàn lao động:</b> Không gian thao tác kép giữa 2 hàng máy hẹp, cần quy trình an toàn nghiêm ngặt."
+            "<b>Bảo trì khó hơn:</b> Thiết bị nằm giữa hai dãy khó tiếp cận khi sửa chữa.",
+            "<b>Rủi ro lan ảnh hưởng:</b> Một sự cố giữa dãy có thể tác động cả hai bên.",
+            "<b>Không gian thao tác hẹp:</b> Cần kiểm soát an toàn kỹ hơn."
         ],
         dims: "18.4m x 6.0m",
         area: "110.4",
-        areaNote: "Tiết kiệm diện tích nhất! Giảm 8.6% so với Layout 1.",
+        areaNote: "Phương án tiết kiệm diện tích tốt khi quy hoạch đường sau hợp lý.",
         image: "layout3_ref.png",
-        formula: "Dài = (Số trạm/2) × 1.8m | Rộng = 6.0m"
+        formula: "Dài = (Số trạm / 2) × 1.8m | Rộng = 6.0m"
     },
     4: {
-        name: "Layout 'Đấu Trường' (Hình Tròn/Xoay)",
+        name: "Layout Đấu Trường (Hình tròn / xoay)",
         pros: [
-            "<b>Không gian 'chết' bằng 0:</b> Tận dụng triệt để hình học. CTU ở tâm chỉ cần quay thay vì chạy thẳng, tốc độ cực nhanh.",
-            "<b>AGV chạy liên tục:</b> Xe AGV chạy vòng tròn bên ngoài không bao giờ phải dừng lại quay đầu hay lùi xe.",
-            "<b>Tầm nhìn bao quát 360 độ:</b> Quản lý đứng ở mọi vị trí đều quan sát được toàn bộ hoạt động của chuyền."
+            "<b>Dòng chạy liên tục:</b> AGV đi vòng ngoài, CTU xử lý quanh tâm quay.",
+            "<b>Tầm nhìn bao quát:</b> Dễ quan sát toàn bộ cụm từ một số vị trí.",
+            "<b>Giảm điểm chết tuyến:</b> Không có đầu cụt như layout thẳng."
         ],
         cons: [
-            "<b>Chi phí chế tạo lớn:</b> Băng tải và bàn máy phải thiết kế cong hoặc hình thang, gia công phức tạp và đắt tiền.",
-            "<b>Cấp nguồn phức tạp:</b> Cụm trung tâm xoay tròn cần hệ thống cổ góp điện hoặc dây treo chuyên dụng.",
-            "<b>Không thể mở rộng:</b> Khi đã chốt đường kính, việc thêm máy là không thể trừ khi xây vòng tròn mới."
+            "<b>Chi phí cơ khí cao:</b> Băng tải cong hoặc cụm xoay phức tạp hơn.",
+            "<b>Khó mở rộng:</b> Muốn tăng trạm thường phải thay đổi toàn bộ đường kính.",
+            "<b>Hiệu quả mặt bằng không cao:</b> Có khoảng rỗng ở tâm và vùng bao ngoài."
         ],
         dims: "14.5m x 14.5m",
         area: "210.3",
-        areaNote: "<b>Căn cứ tính toán (Khung bao chữ nhật):</b> Diện tích bị tính bao gồm toàn bộ hình vuông bao quanh vòng tròn (14.5x14.5m). Phần lõi rỗng ở tâm và các 'góc chết' tuy không đặt máy nhưng không thể sử dụng cho việc khác, nên được tính là diện tích chiếm dụng.",
+        areaNote: "Bố trí trực quan nhưng cần cân nhắc kỹ phần diện tích không tạo giá trị ở vùng tâm.",
         image: "layout4_ref.png",
-        formula: "Đường kính = (Số trạm × 1.8 / π) + depth"
+        formula: "Đường kính ≈ (Số trạm × 1.8 / π) + chiều sâu thao tác"
     },
     5: {
-        name: "Layout Chữ C (Kho Bên Ngoài)",
+        name: "Layout Chữ C (Kho bên ngoài)",
         pros: [
-            "<b>Kho riêng biệt:</b> Kho nằm ngoài vòng, dễ mở rộng dung lượng lưu trữ mà không ảnh hưởng layout.",
-            "<b>4 làn độc lập:</b> AGV VÀO/RA và CTU VÀO/RA hoàn toàn tách biệt - không giao cắt, an toàn tối đa.",
-            "<b>Không cần cầu:</b> Cả AGV và CTU đều nối thẳng từ kho vào vòng tương ứng, không phức tạp."
+            "<b>Kho tách riêng:</b> Dễ mở rộng dung lượng lưu trữ mà ít ảnh hưởng khu thao tác.",
+            "<b>Tuyến vào ra rõ:</b> Luồng AGV và CTU có thể tổ chức tách nhánh dễ hơn.",
+            "<b>Phù hợp cấp phát theo phía:</b> Hữu ích khi kho đặt lệch một bên nhà xưởng."
         ],
         cons: [
-            "<b>Diện tích lớn hơn:</b> Cần thêm không gian cho kho bên ngoài và các làn kết nối.",
-            "<b>Quản lý 4 làn:</b> Có 4 làn xe riêng biệt cần điều phối chính xác để tránh tắc nghẽn.",
-            "<b>Khoảng cách không đều:</b> Các trạm xa kho hơn sẽ có thời gian cấp hàng lâu hơn."
+            "<b>Tăng chiều dài kết nối:</b> Cần thêm phần giao thông nối kho vào chuyền.",
+            "<b>Nhiều tuyến phải điều phối:</b> Nếu tổ chức không tốt dễ phát sinh giao cắt.",
+            "<b>Trạm xa kho bất lợi:</b> Thời gian đáp ứng ở cuối cụm có thể chậm hơn."
         ],
-        dims: "Cập nhật động",
-        area: "Cập nhật động",
-        areaNote: "<b>Căn cứ tính toán:</b> Diện tích tăng vọt do Kho nằm tách biệt bên ngoài. Bản thân vòng chữ C có kích thước tương đương layout Tròn/Vuông, nhưng phải cộng thêm diện tích của hệ thống đường giao thông kết nối song song từ kho vào dây chuyền.",
+        dims: "Cập nhật theo số trạm",
+        area: "Cập nhật theo số trạm",
+        areaNote: "Hiệu quả phụ thuộc mạnh vào vị trí kho và cách tổ chức các tuyến cấp phát song song.",
         image: "layout5_ref.png",
-        formula: "Đường kính = (Số trạm × 1.8 / π) + kho"
+        formula: "Kích thước phụ thuộc số trạm và khoảng cách kho bên ngoài"
     },
     6: {
-        name: "Layout Vuông (Square Loop)",
+        name: "Layout Vuông (Vòng vuông)",
         pros: [
-            "<b>Tương thích nhà xưởng:</b> Hình vuông/chữ nhật cực kỳ phù hợp với kết cấu cột/dầm của đa số nhà xưởng công nghiệp.",
-            "<b>Dễ chế tạo băng tải:</b> Sử dụng băng tải thẳng + bộ chuyển góc 90 độ (rẻ hơn băng tải cong).",
-            "<b>Bố trí gọn gàng:</b> Bố trí trên 4 cạnh của hình vuông tận dụng tối đa chu vi."
+            "<b>Hợp nhà xưởng:</b> Dễ đặt theo cột, tường và ô lưới mặt bằng hiện hữu.",
+            "<b>Chu vi rõ ràng:</b> Trạm bám theo bốn cạnh nên dễ quy hoạch làn cấp phát.",
+            "<b>Dễ chia khu:</b> Có thể tách theo cạnh để cấp vật tư hoặc bảo trì."
         ],
         cons: [
-            "<b>Góc cua gắt 90°:</b> Xe AGV/CTU phải giảm tốc khi qua góc vuông, chậm hơn so với cua tròn.",
-            "<b>Khó mở rộng góc:</b> Góc chết tại 4 góc vuông khó tận dụng để đặt máy móc.",
-            "<b>Chi phí chuyển hướng:</b> Cần nhiều thiết bị chuyển hướng (Turn table) hoặc xe phải dừng để xoay."
+            "<b>Góc cua gắt:</b> Xe phải giảm tốc ở bốn góc vuông.",
+            "<b>Khó tận dụng vùng giữa:</b> Tâm vuông dễ thành khoảng trống ít giá trị.",
+            "<b>Cần thiết bị đổi hướng:</b> Nếu cơ khí hóa, góc 90 độ làm tăng độ phức tạp."
         ],
         dims: "13.1m x 13.1m",
         area: "171.6",
-        areaNote: "<b>Căn cứ tính toán (Không gian chết):</b> Tương tự layout Tròn, layout Vuông tạo ra 'lỗ hổng' lớn kích thước ~9x9m ở giữa tâm. Đây là vùng diện tích không sinh ra giá trị sản xuất, làm giảm hiệu suất sử dụng mặt bằng so với các layout nén như Back-to-Back.",
+        areaNote: "Dễ hiểu và dễ dựng, nhưng cần xử lý tốt bốn góc cua và vùng giữa.",
         image: "layout6_ref.png",
-        formula: "Mỗi cạnh = (Số trạm/4) × 1.8m + góc"
+        formula: "Mỗi cạnh ≈ (Số trạm / 4) × 1.8m + vùng góc"
     },
     7: {
-        name: "Layout Xương Cá (Herringbone)",
+        name: "Layout Xương Cá",
         pros: [
-            "<b>Diện tích nhỏ nhất:</b> Góc 45° giúp giảm chiều dài đáng kể so với layout thẳng.",
-            "<b>Dòng chảy tự nhiên:</b> Vật liệu di chuyển theo hướng nghiêng, giảm góc cua gắt.",
-            "<b>Tầm nhìn tốt:</b> Công nhân có thể nhìn thấy trạm kế tiếp dễ dàng hơn layout thẳng."
+            "<b>Tiết kiệm diện tích:</b> Các nhánh chéo giúp nén chiều dài rất tốt.",
+            "<b>Dòng vật tư tự nhiên:</b> Giảm cảm giác gãy khúc so với nhiều góc vuông.",
+            "<b>Dễ gom cấp phát:</b> Thuận lợi khi muốn dồn vật tư về sống chính."
         ],
         cons: [
-            "<b>Băng tải phức tạp:</b> Cần thiết kế băng tải nghiêng góc 45°, gia công đặc biệt.",
-            "<b>Khó căn chỉnh:</b> Lắp đặt và hiệu chỉnh cần độ chính xác cao hơn layout thẳng.",
-            "<b>Chi phí cao hơn:</b> Thiết bị chuyển hướng và băng tải nghiêng đắt tiền hơn."
+            "<b>Thi công khó hơn:</b> Băng tải và kệ theo góc nghiêng phức tạp hơn bố trí thẳng.",
+            "<b>Căn chỉnh khắt khe:</b> Sai số lắp đặt dễ làm mất đều khoảng cách giữa các nhánh.",
+            "<b>Chi phí ban đầu cao hơn:</b> Cần gia công và tiêu chuẩn hóa cẩn thận."
         ],
         dims: "13.0m x 6.0m",
         area: "78.0",
-        areaNote: "🏆 TIẾT KIỆM NHẤT! Giảm 35% so với Layout 1, 29% so với Layout 3.",
+        areaNote: "Phương án nén diện tích rất mạnh, phù hợp khi mặt bằng hẹp nhưng dài.",
         image: "layout7_ref.png",
-        formula: "Dài = (Số trạm/2) × 1.3m + gap | Rộng = 6.0m"
+        formula: "Dài ≈ (Số trạm / 2) × 1.3m + khoảng cách nhánh | Rộng ≈ 6.0m"
     },
     8: {
-        name: "Layout Chữ U Úp (n-Shape)",
+        name: "Layout Chữ U Úp",
         pros: [
-            "<b>Dễ quản lý vào/ra:</b> Cửa vào và ra nằm cùng một phía (đáy chữ U), thuận tiện cho AGV/Kho tập trung.",
-            "<b>Luồng đi rõ ràng:</b> Di chuyển theo 3 cạnh (Trái -> Trên -> Phải), không có điểm giao cắt nội bộ.",
-            "<b>Tiết kiệm không gian:</b> Tận dụng tốt góc nhà xưởng hoặc khu vực có luồng tiếp cận từ 1 phía."
+            "<b>Điểm vào ra tập trung:</b> Thuận lợi cho kho hoặc AGV tiếp cận từ một phía.",
+            "<b>Dòng chảy rõ:</b> Luồng đi theo ba cạnh nên dễ mô phỏng và phân khu.",
+            "<b>Phù hợp góc nhà xưởng:</b> Tận dụng tốt mặt bằng có một phía tiếp cận chính."
         ],
         cons: [
-            "<b>Đường đi dài hơn:</b> So với xương cá hoặc thẳng, quãng đường vận chuyển nội bộ có thể dài hơn.",
-            "<b>Khó mở rộng:</b> Bị giới hạn bởi chiều rộng chữ U, khó thêm trạm vào 2 cạnh bên nếu hết đất."
+            "<b>Quãng đường trong chuyền dài hơn:</b> Vật tư đi qua ba cạnh nên có thể tăng thời gian nội bộ.",
+            "<b>Mở rộng hạn chế:</b> Khi số trạm tăng, hai cạnh bên dễ quá tải.",
+            "<b>Cần tính kỹ vị trí đầu cuối:</b> Nếu đặt sai sẽ ảnh hưởng luồng người và xe."
         ],
-        dims: "Cập nhật động",
-        area: "Cập nhật động",
-        areaNote: "Diện tích tính theo khung bao hình chữ n.",
+        dims: "Cập nhật theo số trạm",
+        area: "Cập nhật theo số trạm",
+        areaNote: "Hiệu quả tốt khi cần gom đầu vào và đầu ra về cùng một phía.",
         image: "layout2_ref.png",
-        formula: "Bố trí trạm trên 3 cạnh của hình chữ n."
+        formula: "Trạm phân trên ba cạnh của hình chữ U úp"
     }
+};
+
+
+schemes[9] = {
+    name: "Đề án A - FUSER 19K Vòng 1 chiều + 4 điểm dừng + OSS",
+    title: "Đề án A: FUSER 19K Vòng 1 chiều + 4 điểm dừng + OSS",
+    description: "Chuyền FUSER 19 công đoạn được bố trí dạng vòng 1 chiều. AGV-CTU-AMM dùng chung đường phía trước, nhưng chỉ dừng ở 4 điểm dừng tách khỏi làn chính. OSS quản lý linh kiện thường, Cellcon/Oricon/Hancon cấp theo cụm.",
+    pros: [
+        "<b>Giảm quay đầu:</b> Giảm nhu cầu AMM/AGV/CTU quay 180 độ trên làn chính.",
+        "<b>Giảm điểm dừng:</b> Rút từ 19 điểm cấp phát xuống còn 4 điểm dừng theo cụm.",
+        "<b>Phù hợp cấp phát theo cụm:</b> Cellcon/Oricon/Hancon cấp theo điểm dừng thay vì vào từng K.",
+        "<b>Gắn OSS dễ hơn:</b> Có thể quản lý khoảng 50% linh kiện thường tại cụm cấp phát.",
+        "<b>Phù hợp thử nghiệm:</b> Hình học rõ ràng, dễ mô phỏng và triển khai nhanh cho chuyền FUSER."
+    ],
+    cons: [
+        "<b>Điểm dừng nhỏ vẫn có thể gây chắn:</b> Nếu hốc dừng không đủ rộng, xe chờ hàng vẫn ảnh hưởng làn chính.",
+        "<b>K10 là điểm nghẽn tự nhiên:</b> Vùng cua phải vẫn là nơi dễ dồn xe nhất của vòng.",
+        "<b>Không phù hợp cấp phát từng K:</b> Nếu quay lại cấp phát riêng lẻ, làn dùng chung sẽ dễ nghẽn.",
+        "<b>Cần tính toán vận hành:</b> Phải tính tần suất cấp, vùng đệm tại điểm dừng và thời gian chờ xe.",
+        "<b>OSS chưa xác nhận lắp đúng:</b> OSS tốt cho quản lý linh kiện nhưng chưa thay thế kiểm soát lắp ráp."
+    ],
+    dims: "17.8m x 10.8m",
+    area: "192.2",
+    areaNote: "Hốc dừng được tách khỏi làn chính để giữ dòng xe 1 chiều liên tục quanh chuyền.",
+    image: "layout9_ref.svg",
+    formula: "Bố trí cố định 19K dạng vòng 1 chiều với 4 điểm dừng tách khỏi làn chính.",
+    metrics: [
+        ["Số K", "19"],
+        ["Số điểm dừng", "4"],
+        ["Số điểm dừng xe chính", "4"],
+        ["Hướng xe", "1 chiều"],
+        ["Có quay 180 trên làn chính", "Không"],
+        ["Mức rủi ro nghẽn", "Trung bình thấp nếu điểm dừng đủ rộng"],
+        ["Mức phù hợp thử nghiệm", "Cao"]
+    ]
+};
+
+schemes[10] = {
+    name: "Đề án B - Bố trí 4 cụm cấp phát + OSS theo rủi ro",
+    title: "Đề án B: Bố trí 4 cụm cấp phát + OSS theo rủi ro",
+    description: "19 công đoạn FUSER được chia thành 4 cụm theo tải cấp phát và rủi ro thao tác. Mỗi cụm có điểm dừng riêng, vùng OSS cho linh kiện thường, vùng Cellcon/Oricon/Hancon và vùng đệm. OSS chỉ dùng cho linh kiện hoặc công đoạn rủi ro cao thay vì lắp đại trà.",
+    pros: [
+        "<b>Giảm điểm cấp phát:</b> Gom 19 công đoạn thành 4 cụm logistics để cấp phát theo nhóm.",
+        "<b>Phù hợp tỷ lệ linh kiện:</b> Tách rõ nhóm Oricon/Hancon/Cellcon và nhóm linh kiện thường có OSS.",
+        "<b>Triển khai từng phần:</b> Có thể triển khai theo từng cụm mà không phải thay đổi toàn line ngay.",
+        "<b>Kiểm soát thao tác rủi ro:</b> Cho phép đặt đèn chỉ thị, bộ đếm, cân và camera đúng nơi cần thiết.",
+        "<b>Khu cấp phát theo cụm rõ ràng:</b> Điểm dừng, hàng rỗng, vùng đệm và OSS được chuẩn hóa theo từng cụm."
+    ],
+    cons: [
+        "<b>Nguy cơ lệch tải:</b> Nếu chia cụm không đúng, luồng logistics sẽ mất cân bằng.",
+        "<b>Chi phí OSS tăng:</b> Quá nhiều cảm biến hoặc camera sẽ làm vận hành phức tạp hơn.",
+        "<b>OSS chưa thay xác nhận lắp:</b> Chỉ kiểm soát hành động lấy chứ chưa đảm bảo lắp đúng 100%.",
+        "<b>Cần cơ chế ngoại lệ:</b> Phải có thao tác thử lại, quay lui, mở khóa trưởng nhóm và phục hồi tay.",
+        "<b>Diện tích có thể phình:</b> Nếu không giới hạn WIP, mini supermarket sẽ ăn thêm diện tích."
+    ],
+    dims: "18.2m x 11.4m",
+    area: "207.5",
+    areaNote: "Bố trí này tập trung vào cụm vận hành và kiểm soát rủi ro hơn là chỉ tối ưu hình học.",
+    image: "layout10_ref.svg",
+    formula: "4 cụm cấp phát + 4 điểm dừng + OSS theo rủi ro + vùng đệm và hàng rỗng cho từng cụm.",
+    metrics: [
+        ["Số K", "19"],
+        ["Số cụm", "4"],
+        ["Số điểm dừng", "4"],
+        ["Nhóm linh kiện", "Oricon/Hancon/Cellcon 50%, linh kiện thường 50%"],
+        ["Chiến lược OSS", "Theo rủi ro"],
+        ["Điểm mạnh", "Kiểm soát thao tác"],
+        ["Mức phù hợp triển khai từng phần", "Cao"]
+    ]
+};
+
+schemes[11] = {
+    name: "Đề án C - Hai chuyền chung đường giữa + Cụm Cellcon phân tán",
+    title: "Đề án C: Hai chuyền chung đường giữa + Cụm Cellcon phân tán",
+    description: "Hai chuyền cạnh nhau dùng chung một đường AGV-CTU-AMM ở giữa. Cụm Cellcon được phân tán theo từng khu phục vụ thay vì gom ở một đầu. Oricon/Hancon được đưa tới cụm, sau đó Cellcon nhỏ cấp ra chuyền. Mỗi cụm có hốc dừng riêng cho FUSER và chuyền khác, làn chính không dừng.",
+    pros: [
+        "<b>Giảm diện tích vận chuyển:</b> Hai chuyền dùng chung một đường giữa thay vì tách đôi đường cấp phát.",
+        "<b>Giảm Oricon lớn tại chuyền:</b> Chỉ đưa Cellcon nhỏ vào khu thao tác, giúp mặt bằng gọn hơn.",
+        "<b>Phù hợp mở rộng dài hạn:</b> Dễ nhân rộng sang chuyền hoặc cụm mới mà không phải thay đổi triết lý cấp phát.",
+        "<b>Cụm phân tán giảm quãng đường AMM:</b> Không cần kéo Cellcon từ một đầu chuyền đi khắp hệ thống.",
+        "<b>Tách rõ dòng vật tư:</b> Thùng đầy, hàng rỗng, Cellcon, OSS và vùng đệm được phân vai rõ ràng."
+    ],
+    cons: [
+        "<b>Điều phối phức tạp hơn:</b> AGV-CTU-AMM cùng phục vụ 2 chuyền nên luật ưu tiên phải chặt chẽ.",
+        "<b>Đường chung là điểm ảnh hưởng lớn:</b> Nếu xe lỗi trên làn giữa, cả hai chuyền đều có thể bị tác động.",
+        "<b>Hốc dừng phải đủ rộng:</b> Nếu hốc dừng hẹp, xe dừng vẫn có thể lấn vào làn chính.",
+        "<b>Cần luật ưu tiên gọi hàng:</b> Khi hai chuyền gọi cùng lúc, phải ưu tiên theo mức vùng đệm thấp hơn.",
+        "<b>AMM có thể quá tải:</b> Nếu cấp từng Cellcon lẻ, cần gom theo cụm hoặc tăng số Cellcon mỗi chuyến."
+    ],
+    dims: "20.4m x 11.8m",
+    area: "240.7",
+    areaNote: "Bố trí 2 chuyền song song với đường giữa dùng chung giúp nén diện tích dài hạn tốt hơn nhưng đổi lại cần luật điều phối rõ ràng.",
+    image: "layout11_ref.svg",
+    formula: "2 chuyền song song + 1 đường giữa 1 chiều + 4 cụm Cellcon phân tán, mỗi cụm có hốc dừng trên / dưới riêng.",
+    metrics: [
+        ["Số chuyền", "2"],
+        ["FUSER K", "19"],
+        ["UNIT khác", "15 giả lập"],
+        ["Số cụm phân tán", "4"],
+        ["Đường vận chuyển", "Đường chung 1 chiều"],
+        ["Điểm dừng chính", "8 hốc dừng"],
+        ["Rủi ro nghẽn", "Cao nếu không có hốc dừng, trung bình nếu có hốc dừng"],
+        ["Tiềm năng giảm diện tích dài hạn", "Rất cao"],
+        ["Mức phức tạp triển khai", "Cao"]
+    ]
 };
 
 function setScheme(id) {
     currentScheme = id;
 
     // Update UI buttons
-    [1, 2, 3, 4, 5, 6, 7, 8].forEach(i => {
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(i => {
         const btn = document.getElementById(`btn-${i}`);
         if (i === id) {
             btn.classList.add('active', 'bg-blue-600', 'text-white');
-            btn.classList.remove('bg-gray-100', 'text-gray-900', 'bg-pink-100', 'bg-purple-100', 'bg-yellow-100', 'bg-green-100', 'text-pink-900', 'text-purple-900', 'text-yellow-900', 'text-green-900');
+            btn.classList.remove('bg-gray-100', 'text-gray-900', 'bg-pink-100', 'bg-purple-100', 'bg-yellow-100', 'bg-green-100', 'bg-orange-100', 'bg-cyan-100', 'bg-rose-100', 'bg-emerald-100', 'text-pink-900', 'text-purple-900', 'text-yellow-900', 'text-green-900', 'text-orange-900', 'text-cyan-900', 'text-rose-900', 'text-emerald-900');
         } else {
             btn.classList.remove('active', 'bg-blue-600', 'text-white');
             if (i === 4) {
@@ -244,6 +345,12 @@ function setScheme(id) {
                 btn.classList.add('bg-green-100', 'text-green-900');
             } else if (i === 8) {
                 btn.classList.add('bg-orange-100', 'text-orange-900');
+            } else if (i === 9) {
+                btn.classList.add('bg-cyan-100', 'text-cyan-900');
+            } else if (i === 10) {
+                btn.classList.add('bg-rose-100', 'text-rose-900');
+            } else if (i === 11) {
+                btn.classList.add('bg-emerald-100', 'text-emerald-900');
             } else {
                 btn.classList.add('bg-gray-100', 'text-gray-900');
             }
@@ -259,7 +366,7 @@ function setScheme(id) {
     if (id === 1) { // Straight
         length = STATION_COUNT * M_PER_STATION + 0.3; // Added small offset to reach 34.5m exactly for 19
         width = 3.5;
-        formula = `Dài = ${STATION_COUNT} station × 1.8m ≈ ${length.toFixed(1)}m | Rộng = 3.5m`;
+        formula = `Dài = ${STATION_COUNT} station × 1.8m = ${length.toFixed(1)}m | Rộng = 3.5m`;
     } else if (id === 2) { // U-Shape
         length = Math.ceil(STATION_COUNT / 2) * M_PER_STATION + 1.1;
         width = 7.0;
@@ -290,12 +397,26 @@ function setScheme(id) {
         formula = `Cạnh ≈ Math.ceil(${STATION_COUNT}/3) × 1.8m + gap = ${side.toFixed(1)}m`;
     }
 
+    if (id === 9) { // FUSER loop 19K + 4 dock + OSS
+        length = 17.8;
+        width = 10.8;
+        formula = 'Bố trí cố định 19K dạng vòng 1 chiều với 4 điểm dừng tách khỏi làn chính.';
+    } else if (id === 10) { // 4 cell docking + risk-based OSS
+        length = 18.2;
+        width = 11.4;
+        formula = '4 cụm cấp phát với điểm dừng riêng, OSS theo rủi ro, khu hàng rỗng và vùng đệm theo cụm.';
+    } else if (id === 11) { // Dual-line shared road + distributed hub
+        length = 20.4;
+        width = 11.8;
+        formula = '2 chuyền song song + 1 đường giữa 1 chiều + 4 cụm phân tán, mỗi cụm có hốc dừng trên / dưới riêng.';
+    }
+
     area = length * width;
     info.dims = `${length.toFixed(1)}m x ${width.toFixed(1)}m`;
     info.area = area.toFixed(1);
     info.formula = formula;
 
-    const html = `
+        let html = `
                 <div class="mb-2"><strong class="text-green-600">Ưu điểm:</strong>
                     <ul class="list-disc pl-5 mt-1 space-y-1">
                         ${info.pros.map(p => `<li>${p}</li>`).join('')}
@@ -329,23 +450,40 @@ function setScheme(id) {
                     </div>
                     ` : ''}
                     <p class="text-xs text-gray-500 mt-2 italic border-t border-blue-200 pt-2">
-                        *Thông số cơ bản: 1 Station = 1.8m x 2.3m, Gap = 0.2m (đã điều chỉnh theo thực tế 19 trạm)
+                        *Thông số cơ bản: 1 Station = 1.8m x 2.3m, Gap = 0.2m (được điều chỉnh theo thực tế 19 trạm)
                     </p>
                     ${info.areaNote ? `<p class="text-sm text-green-700 font-semibold mt-2">💡 ${info.areaNote}</p>` : ''}
                 </div>
             `;
+    if (info.description) {
+        const metricsHtml = Array.isArray(info.metrics) ? `
+                <div class="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-3">Chỉ số mô phỏng</h3>
+                    <div class="grid grid-cols-1 gap-2 text-sm">
+                        ${info.metrics.map(([label, value]) => `<div class="flex items-start justify-between gap-3"><span class="text-slate-500">${label}</span><span class="font-semibold text-slate-800 text-right">${value}</span></div>`).join('')}
+                    </div>
+                </div>
+        ` : '';
+        html = `
+                <div class="mb-4">
+                    <h3 class="text-base font-bold text-slate-900">${info.title || info.name}</h3>
+                    <p class="mt-2 text-sm text-slate-600">${info.description}</p>
+                </div>
+        ` + metricsHtml + html;
+    }
     document.getElementById('analysis-content').innerHTML = html;
 
     // Reset Animation
     agvPos.progress = 0;
     ctuPos.progress = 0;
+    ammPos.progress = 0;
 
     // Update Reference Image
     document.getElementById('ref-image').src = info.image || 'layout1_ref.png';
 
-    // Show/Hide 3D Button for Layout 3, 4, 5, 6, and 7
+    // Show/Hide 3D Button for layouts that have dedicated 3D pages
     const view3dContainer = document.getElementById('view-3d-container');
-    if (id === 3 || id === 4 || id === 5 || id === 6 || id === 7) {
+    if (id === 3 || id === 4 || id === 5 || id === 6 || id === 7 || id === 9 || id === 10 || id === 11) {
         view3dContainer.classList.remove('hidden');
     } else {
         view3dContainer.classList.add('hidden');
@@ -365,6 +503,12 @@ function open3DView() {
         window.open('layout6_3d_simulation.html' + urlParams, '_blank');
     } else if (currentScheme === 7) {
         window.open('layout7_3d_simulation.html' + urlParams, '_blank');
+    } else if (currentScheme === 9) {
+        window.open('layout9_3d_simulation.html' + urlParams, '_blank');
+    } else if (currentScheme === 10) {
+        window.open('layout10_3d_simulation.html' + urlParams, '_blank');
+    } else if (currentScheme === 11) {
+        window.open('layout11_3d_simulation.html' + urlParams, '_blank');
     }
 }
 
@@ -527,7 +671,7 @@ function drawStation(x, y, label, rotation = 0) {
     ctx.fillRect(x, y, STATION_W, STATION_H);
     ctx.strokeRect(x, y, STATION_W, STATION_H);
 
-    // 2. Bàn Thao Tác (Work Table) - Dark Blue, top section
+    // 2. Bﾃn Thao Tﾃ｡c (Work Table) - Dark Blue, top section
     // Takes up about 1/3 of height at top
     const tableHeight = STATION_H * 0.35;
     ctx.fillStyle = "#1e3a8a"; // Blue-900 (Dark blue like Excel)
@@ -535,7 +679,7 @@ function drawStation(x, y, label, rotation = 0) {
     ctx.strokeStyle = "#1e40af";
     ctx.strokeRect(x + 1, y + 1, STATION_W - 2, tableHeight);
 
-    // 3. Giá Đựng Thùng Oricon (Oricon Rack) - Blue vertical strips on BOTH sides
+    // 3. Giﾃ｡ ﾄ雪ｻｱng Thﾃｹng Oricon (Oricon Rack) - Blue vertical strips on BOTH sides
     // Left Rack
     const rackWidth = STATION_W * 0.2;
     const rackY = y + tableHeight + 2;
@@ -612,6 +756,217 @@ function drawVehicle(x, y, color, label) {
     ctx.fillStyle = "black";
     ctx.font = "9px sans-serif";
     ctx.fillText(label, x, y - 12);
+}
+
+function drawRoundedRectPath(x, y, w, h, r) {
+    const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+
+function drawVehicleBox(x, y, color, label) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 1.5;
+    drawRoundedRectPath(x - 12, y - 8, 24, 16, 4);
+    ctx.fill();
+    ctx.stroke();
+    if (label) {
+        ctx.fillStyle = "#111827";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(label, x, y - 14);
+    }
+    ctx.restore();
+}
+
+function drawArrowHead(x, y, angle, color, size = 7) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, size * 0.55);
+    ctx.lineTo(-size, -size * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawOneWayArrowMarkers(pathPoints, color) {
+    for (let i = 0; i < pathPoints.length - 1; i++) {
+        const p1 = pathPoints[i];
+        const p2 = pathPoints[i + 1];
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        drawArrowHead(mx, my, angle, color, 8);
+    }
+}
+
+function drawRectLabel(x, y, w, h, fill, stroke, label, textColor = "#111827") {
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.5;
+    drawRoundedRectPath(x, y, w, h, 6);
+    ctx.fill();
+    ctx.stroke();
+    if (label) {
+        ctx.fillStyle = textColor;
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, x + w / 2, y + h / 2);
+    }
+    ctx.restore();
+}
+
+function drawLayout9Station(x, y, label, rotation = 0) {
+    ctx.save();
+    if (rotation !== 0) {
+        ctx.translate(x + STATION_W / 2, y + STATION_H / 2);
+        ctx.rotate(rotation);
+        ctx.translate(-(x + STATION_W / 2), -(y + STATION_H / 2));
+    }
+    ctx.fillStyle = "#d1fae5";
+    ctx.strokeStyle = "#059669";
+    ctx.lineWidth = 1.5;
+    drawRoundedRectPath(x, y, STATION_W, STATION_H, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e5e7eb";
+    ctx.fillRect(x + 4, y + 4, STATION_W - 8, 11);
+    ctx.strokeStyle = "#9ca3af";
+    ctx.strokeRect(x + 4, y + 4, STATION_W - 8, 11);
+    ctx.fillStyle = "#6ee7b7";
+    ctx.fillRect(x + 4, y + 18, STATION_W - 8, STATION_H - 22);
+    ctx.fillStyle = "#065f46";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + STATION_W / 2, y + STATION_H / 2 + 2);
+    ctx.restore();
+}
+
+function drawCompactStation(x, y, w, h, label, fill, stroke, textColor = "#0f172a") {
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.4;
+    drawRoundedRectPath(x, y, w, h, 5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillRect(x + 3, y + 3, w - 6, 8);
+    ctx.fillStyle = textColor;
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+    ctx.restore();
+}
+
+function drawDockCluster(cfg) {
+    const { x, y, w, h, dockLabel, clusterLabel } = cfg;
+    drawRectLabel(x, y, w, h, "#fed7aa", "#f97316", dockLabel, "#9a3412");
+    ctx.save();
+    ctx.fillStyle = "#9a3412";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(clusterLabel, x + 8, y + 14);
+    drawRectLabel(x + 8, y + 24, 52, 18, "#e9d5ff", "#a855f7", "OSS", "#6b21a8");
+    drawRectLabel(x + 68, y + 24, 40, 18, "#dbeafe", "#60a5fa", "ĐỆM", "#1d4ed8");
+    drawRectLabel(x + 116, y + 24, 50, 18, "#cbd5e1", "#64748b", "RỖNG", "#334155");
+    for (let i = 0; i < 5; i++) {
+        drawRectLabel(x + 8 + i * 18, y + 50, 14, 14, "#fde68a", "#eab308", "");
+    }
+    drawRectLabel(x + 108, y + 50, 58, 14, "#bfdbfe", "#3b82f6", "ORI/HAN", "#1e3a8a");
+    ctx.restore();
+}
+
+function drawDistributedCellconHub(cfg) {
+    const { x, y, w, h, name, serves } = cfg;
+    const innerX = x + 8;
+    const innerW = w - 16;
+    const smallGap = 6;
+    const smallW = Math.floor((innerW - smallGap * 2) / 3);
+    ctx.save();
+    ctx.fillStyle = "#fef9c3";
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 1.6;
+    drawRoundedRectPath(x, y, w, h, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#92400e";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(name, x + w / 2, y + 14);
+    ctx.font = "9px sans-serif";
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(serves, x + w / 2, y + 28);
+
+    drawRectLabel(innerX, y + 38, innerW, 16, "#bfdbfe", "#60a5fa", "Đầu vào ORI/HAN", "#1e3a8a");
+    drawRectLabel(innerX, y + 60, smallW, 16, "#ede9fe", "#a855f7", "OSS", "#6b21a8");
+    drawRectLabel(innerX + smallW + smallGap, y + 60, smallW, 16, "#dbeafe", "#60a5fa", "ĐỆM", "#1d4ed8");
+    drawRectLabel(innerX + (smallW + smallGap) * 2, y + 60, smallW, 16, "#d1d5db", "#6b7280", "RỖNG", "#374151");
+
+    for (let i = 0; i < 6; i++) {
+        drawRectLabel(innerX + i * 18, y + 84, 14, 14, "#facc15", "#ca8a04", "");
+    }
+
+    ctx.strokeStyle = "#f97316";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(innerX + 4, y + 108);
+    ctx.lineTo(x + w - 12, y + 108);
+    ctx.stroke();
+    drawArrowHead(x + w - 16, y + 108, 0, "#f97316", 6);
+
+    ctx.fillStyle = "#f97316";
+    ctx.font = "bold 8px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ORI/HAN → Cellcon → Chuyền", x + w / 2, y + 122);
+    ctx.restore();
+}
+
+function drawCanvasLegend(items, x, y, width = 190) {
+    const height = 34 + items.length * 16 + 12;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 1;
+    drawRoundedRectPath(x, y, width, height, 10);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("CHÚ GIẢI", x + 12, y + 16);
+    items.forEach((item, index) => {
+        const itemY = y + 34 + index * 16;
+        ctx.fillStyle = item.color;
+        ctx.fillRect(x + 12, itemY - 8, 14, 10);
+        ctx.strokeStyle = item.stroke || item.color;
+        ctx.strokeRect(x + 12, itemY - 8, 14, 10);
+        ctx.fillStyle = "#334155";
+        ctx.font = "10px sans-serif";
+        ctx.fillText(item.label, x + 34, itemY);
+    });
+    ctx.restore();
 }
 
 // --- Schemes Drawing ---
@@ -882,7 +1237,7 @@ function drawScheme4() {
     ctx.strokeStyle = "#d97706"; ctx.lineWidth = 2; ctx.strokeRect(warehouseX - 30, warehouseY - 40, 80, 80);
     ctx.fillStyle = "#78350f"; ctx.fillText("KHO (WH)", warehouseX + 10, warehouseY);
 
-    // NEW DESIGN: Parallel ramps at same angle (~0ﾂｰ) pointing to warehouse
+    // NEW DESIGN: Parallel ramps at same angle (~0・ゑｽｰ) pointing to warehouse
     // Gap angle: small offset for IN (-0.12 rad) and OUT (+0.12 rad)
     const rampGapOffset = 0.12;
     const inRampAngle = -rampGapOffset;
@@ -903,7 +1258,7 @@ function drawScheme4() {
 
     // OUT Label and Arrow
     ctx.fillStyle = "#0e7490"; ctx.font = "bold 10px sans-serif";
-    ctx.fillText("RA →", (outBridgeStart.x + outBridgeEnd.x) / 2, (outBridgeStart.y + outBridgeEnd.y) / 2 - 10);
+    ctx.fillText("RA", (outBridgeStart.x + outBridgeEnd.x) / 2, (outBridgeStart.y + outBridgeEnd.y) / 2 - 10);
 
             // IN Bridge (Blue) - Bottom lane, CTU returning FROM warehouse
             const inBridgeStart = {
@@ -920,7 +1275,7 @@ function drawScheme4() {
 
     // IN Label and Arrow
     ctx.fillStyle = "#1e40af"; ctx.font = "bold 10px sans-serif";
-    ctx.fillText("→ VÀO", (inBridgeStart.x + inBridgeEnd.x) / 2, (inBridgeStart.y + inBridgeEnd.y) / 2 + 18);
+    ctx.fillText("VÀO", (inBridgeStart.x + inBridgeEnd.x) / 2, (inBridgeStart.y + inBridgeEnd.y) / 2 + 18);
 
     // AGV Ring (Outer)
     ctx.beginPath();
@@ -938,14 +1293,14 @@ function drawScheme4() {
         agvData.push({ x: centerX + Math.cos(a) * radiusOuter, y: centerY + Math.sin(a) * radiusOuter });
     }
 
-    // CTU: FULL 360° Circle + Trip to/from Warehouse via parallel ramps
+    // CTU: FULL 360ﾂｰ Circle + Trip to/from Warehouse via parallel ramps
     const ctuData = [];
     // Part 1: Start at warehouse (OUT side)
     ctuData.push({ x: warehouseX, y: warehouseY - 15 });
     ctuData.push(outBridgeEnd);
     ctuData.push(outBridgeStart);
 
-    // Part 2: FULL 360° circle (all stations)
+    // Part 2: FULL 360ﾂｰ circle (all stations)
     const fullCircleSteps = 80;
     const fullArc = 2 * Math.PI - (outRampAngle - inRampAngle);
     for (let i = 0; i <= fullCircleSteps; i++) {
@@ -967,9 +1322,9 @@ function drawScheme4() {
     return { ctu: ctuData, agv: agvData };
 }
 
-// Layout 5: TRUE C-SHAPE - Các 2 track đặt ở cùng trên (không kín)
-// Layout 5: Layout Chữ C (Kho Bên Ngoài) - Parallel Connections
-// Cả AGV và CTU đặt ở tại 2 đầu chữ C về kho - không đi qua giữa
+// Layout 5: TRUE C-SHAPE - Cﾃ｡c 2 track ﾄ黛ｺｷt 盻・cﾃｹng trﾃｪn (khﾃｴng kﾃｭn)
+// Layout 5: Layout Ch盻ｯ C (Kho Bﾃｪn Ngoﾃi) - Parallel Connections
+// C蘯｣ AGV vﾃ CTU ﾄ黛ｺｷt 盻・t蘯｡i 2 ﾄ黛ｺｧu ch盻ｯ C v盻・kho - khﾃｴng ﾄ訴 qua gi盻ｯa
 function drawScheme5() {
     const centerX = 280;
     const centerY = 280;
@@ -1035,7 +1390,7 @@ function drawScheme5() {
     const ctuTopPt = { x: centerX + Math.cos(gapStart) * radiusInner, y: centerY + Math.sin(gapStart) * radiusInner };
 
     // --- LANES (Parallel Curves) ---
-    // AGV VÀO
+    // AGV VﾃO
     ctx.beginPath();
     ctx.moveTo(warehouseX, warehouseY + 50);
     ctx.quadraticCurveTo(warehouseX - 50, warehouseY + 50, agvBottomPt.x, agvBottomPt.y);
@@ -1050,7 +1405,7 @@ function drawScheme5() {
     ctx.strokeStyle = "#86efac"; ctx.lineWidth = 8; ctx.stroke();
     ctx.fillText("AGV RA", warehouseX - 50, warehouseY - 60);
 
-    // CTU VÀO
+    // CTU VﾃO
     ctx.beginPath();
     ctx.moveTo(warehouseX - 35, warehouseY + 25);
     ctx.quadraticCurveTo(warehouseX - 80, warehouseY + 25, ctuBottomPt.x, ctuBottomPt.y);
@@ -1299,7 +1654,7 @@ function drawScheme6() {
 }
 
 function drawScheme7() {
-    // Herringbone/Xương Cá Layout - Stations at 45° angles
+    // Herringbone/Xﾆｰﾆ｡ng Cﾃ｡ Layout - Stations at 45ﾂｰ angles
     const startX = 80;
     const centerY = 280;
     const spacing = 32; // Tighter spacing to remove gaps
@@ -1351,16 +1706,16 @@ function drawScheme7() {
     ctx.fillText("CTU PATH (TRUNG TÂM)", startX + totalWidth / 2, centerY);
 
     const stationPoints = [];
-    // Draw Top Row Stations (countTop stations, angled -45° like \)
+    // Draw Top Row Stations (countTop stations, angled -45ﾂｰ like \)
     // Position stations at topY (above CTU), offset outward for symmetry
     for (let i = 0; i < countTop; i++) {
         const x = startX + i * spacing;
         const y = topY - 10; // Move UP (away from CTU)
-        drawStation(x, y, `S${i + 1}`, -Math.PI / 4); // -45° angle
+        drawStation(x, y, `S${i + 1}`, -Math.PI / 4); // -45ﾂｰ angle
         stationPoints.push({ x: x + STATION_W / 2, y: y + STATION_H / 2 });
     }
 
-    // Draw Bottom Row Stations (countBot stations, angled +45° like /)
+    // Draw Bottom Row Stations (countBot stations, angled +45ﾂｰ like /)
     // Position stations at botY (below CTU), offset outward for symmetry
     for (let i = 0; i < countBot; i++) {
         const x = startX + i * spacing;
@@ -1494,6 +1849,470 @@ function drawScheme8() {
     return { ctu: ctuPoints, agv: agvPoints };
 }
 
+
+function drawScheme9() {
+    // Layout 9: FUSER 19K loop 1 chiều + 4 dock + OSS
+    const startX = 166;
+    const topY = 120;
+    const bottomY = 326;
+    const spacing = 58;
+    const roadTop = 92;
+    const roadBottom = 432;
+    const roadLeft = 130;
+    const roadRight = 732;
+
+    ctx.save();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Đề án A - FUSER 19K Vòng 1 chiều + 4 điểm dừng + OSS", 32, 34);
+    ctx.restore();
+
+    drawRectLabel(30, 68, 80, 42, "#fcd34d", "#d97706", "KHO", "#78350f");
+
+    const roadPath = [
+        { x: roadLeft, y: roadTop },
+        { x: roadRight, y: roadTop },
+        { x: roadRight, y: roadBottom },
+        { x: roadLeft, y: roadBottom },
+        { x: roadLeft, y: roadTop }
+    ];
+    drawPath(roadPath, "#93c5fd", 22);
+    drawPath(roadPath, "#1d4ed8", 3, true);
+    drawOneWayArrowMarkers(roadPath, "#1d4ed8");
+    ctx.save();
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Làn chung AGV / CTU / AMM chạy 1 chiều", roadLeft + 182, roadTop - 14);
+    ctx.restore();
+
+    const stationPoints = [];
+    for (let i = 0; i < 9; i++) {
+        const x = startX + i * spacing;
+        drawLayout9Station(x, topY, `K${i + 1}`);
+        stationPoints.push({ x: x + STATION_W / 2, y: topY + STATION_H / 2 });
+    }
+
+    const k10X = startX + 9 * spacing - 6;
+    const k10Y = 212;
+    drawLayout9Station(k10X, k10Y, "K10", Math.PI / 2);
+    stationPoints.push({ x: k10X + STATION_W / 2, y: k10Y + STATION_H / 2 });
+
+    const bottomStartX = startX + 8 * spacing;
+    for (let i = 0; i < 9; i++) {
+        const x = bottomStartX - i * spacing;
+        drawLayout9Station(x, bottomY, `K${11 + i}`, Math.PI);
+        stationPoints.push({ x: x + STATION_W / 2, y: bottomY + STATION_H / 2 });
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#f97316";
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(stationPoints[0].x, stationPoints[0].y);
+    for (let i = 1; i < stationPoints.length; i++) {
+        ctx.lineTo(stationPoints[i].x, stationPoints[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (let i = 0; i < stationPoints.length - 1; i++) {
+        const p1 = stationPoints[i];
+        const p2 = stationPoints[i + 1];
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const px = p1.x + (p2.x - p1.x) * 0.55;
+        const py = p1.y + (p2.y - p1.y) * 0.55;
+        drawArrowHead(px, py, angle, "#f97316", 6);
+    }
+    ctx.restore();
+
+    const noStopX = roadRight - 88;
+    const noStopY = 152;
+    ctx.save();
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    drawRoundedRectPath(noStopX, noStopY, 80, 170, 18);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#b91c1c";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("KHÔNG DỪNG", noStopX + 40, noStopY + 74);
+    ctx.fillText("TẠI CUA", noStopX + 40, noStopY + 88);
+    ctx.fillText("Không cấp phát", noStopX + 40, noStopY + 110);
+    ctx.fillText("tại cua K10", noStopX + 40, noStopY + 124);
+    ctx.restore();
+
+    const docks = [
+        { x: 166, y: 186, w: 166, h: 70, dockLabel: "Điểm dừng A", clusterLabel: "K1-K5" },
+        { x: 446, y: 186, w: 166, h: 70, dockLabel: "Điểm dừng B", clusterLabel: "K6-K10" },
+        { x: 446, y: 282, w: 166, h: 70, dockLabel: "Điểm dừng C", clusterLabel: "K11-K15" },
+        { x: 166, y: 282, w: 166, h: 70, dockLabel: "Điểm dừng D", clusterLabel: "K16-K19" }
+    ];
+    docks.forEach(drawDockCluster);
+
+    drawCanvasLegend([
+        { color: "#d1fae5", stroke: "#059669", label: "Trạm K" },
+        { color: "#fed7aa", stroke: "#f97316", label: "Hốc dừng" },
+        { color: "#e9d5ff", stroke: "#a855f7", label: "OSS và đệm" },
+        { color: "#bfdbfe", stroke: "#3b82f6", label: "Giá ORI/HAN" },
+        { color: "#fde68a", stroke: "#eab308", label: "Ô Cellcon" },
+        { color: "#93c5fd", stroke: "#1d4ed8", label: "Làn 1 chiều" }
+    ], 18, 344, 148);
+
+    drawVehicleBox(138, 96, "#fb923c", "AMM");
+
+    const sharedLoop = [
+        { x: roadLeft, y: roadTop },
+        { x: roadRight, y: roadTop },
+        { x: roadRight, y: roadBottom },
+        { x: roadLeft, y: roadBottom },
+        { x: roadLeft, y: roadTop }
+    ];
+
+    return {
+        agv: sharedLoop,
+        ctu: sharedLoop,
+        amm: sharedLoop,
+        vehicleStyle: "box",
+        vehicleOffsets: { ctu: 0.22, amm: 0.48 },
+        hideVehicleLabels: true
+    };
+}
+
+function drawCellBoundary(cell) {
+    ctx.save();
+    ctx.strokeStyle = cell.border;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 6]);
+    drawRoundedRectPath(cell.x, cell.y, cell.w, cell.h, 14);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = cell.fill;
+    drawRoundedRectPath(cell.x, cell.y, cell.w, cell.h, 14);
+    ctx.globalAlpha = 0.16;
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawDockPocket(x, y, w, h, label) {
+    drawRectLabel(x, y, w, h, "#fed7aa", "#f97316", label, "#9a3412");
+}
+
+function drawOssZone(x, y, w, h, riskLevel = "", options = {}) {
+    const { subtitle = true } = options;
+    drawRectLabel(x, y, w, h, "#ede9fe", "#a855f7", "OSS", "#6b21a8");
+    if (!subtitle || !riskLevel) return;
+    ctx.save();
+    ctx.fillStyle = "#7c3aed";
+    ctx.font = "9px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Đèn chỉ thị", x + 6, y + h + 12);
+    ctx.fillText(riskLevel, x + 6, y + h + 24);
+    ctx.restore();
+}
+
+function drawCellconSlots(x, y, count) {
+    for (let i = 0; i < count; i++) {
+        drawRectLabel(x + i * 18, y, 14, 14, "#fde68a", "#eab308", "");
+    }
+}
+
+function drawRiskMarker(x, y, label, fill) {
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#111827";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x, y + 0.5);
+    ctx.restore();
+}
+
+function drawBufferZone(x, y, w, h, label = "ĐỆM") {
+    drawRectLabel(x, y, w, h, "#dbeafe", "#60a5fa", label, "#1d4ed8");
+}
+
+function drawScheme10() {
+    // Layout 10: 4 cell docking + risk-based OSS
+    const roadY = 424;
+    const roadLeft = 96;
+    const roadRight = 734;
+    const cells = [
+        {
+            name: "Cụm A",
+            subline: "K1-K5 | OSS mức cao",
+            ks: ["K1", "K2", "K3", "K4", "K5"],
+            x: 62, y: 72, w: 320, h: 142,
+            border: "#ef4444", fill: "#fee2e2",
+            dock: "Điểm dừng A", status: "Thử lại"
+        },
+        {
+            name: "Cụm B",
+            subline: "K6-K10 | ORI/HAN / Cellcon",
+            ks: ["K6", "K7", "K8", "K9", "K10"],
+            x: 412, y: 72, w: 320, h: 142,
+            border: "#f59e0b", fill: "#fef3c7",
+            dock: "Điểm dừng B", status: "Bộ đếm"
+        },
+        {
+            name: "Cụm C",
+            subline: "K11-K15 | Sẵn sàng AMM",
+            ks: ["K11", "K12", "K13", "K14", "K15"],
+            x: 62, y: 230, w: 320, h: 142,
+            border: "#8b5cf6", fill: "#f3e8ff",
+            dock: "Điểm dừng C", status: "Camera"
+        },
+        {
+            name: "Cụm D",
+            subline: "K16-K19 | Hoàn thiện / WIP",
+            ks: ["K16", "K17", "K18", "K19"],
+            x: 412, y: 230, w: 320, h: 142,
+            border: "#14b8a6", fill: "#ccfbf1",
+            dock: "Điểm dừng D", status: "Kiểm tra"
+        }
+    ];
+
+    ctx.save();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Đề án B - Bố trí 4 cụm cấp phát + OSS theo rủi ro", 28, 34);
+    ctx.restore();
+
+    drawRectLabel(24, 58, 78, 44, "#fcd34d", "#d97706", "KHO", "#78350f");
+
+    const sharedRoad = [
+        { x: roadLeft, y: roadY },
+        { x: roadRight, y: roadY }
+    ];
+    drawPath(sharedRoad, "#93c5fd", 28);
+    drawPath(sharedRoad, "#1d4ed8", 3, true);
+    drawArrowHead(260, roadY, 0, "#1d4ed8", 8);
+    drawArrowHead(490, roadY, 0, "#1d4ed8", 8);
+    drawArrowHead(670, roadY, 0, "#1d4ed8", 8);
+
+    cells.forEach((cell, cellIdx) => {
+        drawCellBoundary(cell);
+
+        ctx.save();
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "bold 13px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(cell.name, cell.x + 10, cell.y + 18);
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "#475569";
+        ctx.fillText(cell.subline, cell.x + 10, cell.y + 34);
+        ctx.restore();
+        drawRectLabel(cell.x + cell.w - 84, cell.y + 10, 72, 18, "#ffffff", cell.border, cell.status, "#334155");
+
+        cell.ks.forEach((k, idx) => {
+            const stationX = cell.x + 14 + idx * 58;
+            const stationY = cell.y + 50;
+            drawLayout9Station(stationX, stationY, k);
+        });
+
+        drawDockPocket(cell.x + 12, cell.y + 102, 82, 20, cell.dock);
+        drawRectLabel(cell.x + 102, cell.y + 102, 64, 20, "#bfdbfe", "#3b82f6", "ORI/HAN", "#1e3a8a");
+        drawRectLabel(cell.x + 174, cell.y + 102, 72, 20, "#d1d5db", "#6b7280", "RỖNG", "#374151");
+        drawBufferZone(cell.x + 254, cell.y + 102, 52, 20, "ĐỆM");
+        drawOssZone(cell.x + 12, cell.y + 126, 56, 16, "", { subtitle: false });
+        drawCellconSlots(cell.x + 76, cell.y + 127, cellIdx === 3 ? 4 : 5);
+
+        if (cellIdx === 0) {
+            drawRiskMarker(cell.x + 278, cell.y + 64, "R1", "#ef4444");
+            drawRiskMarker(cell.x + 306, cell.y + 90, "R1", "#ef4444");
+            drawRectLabel(cell.x + 176, cell.y + 126, 128, 16, "#fef2f2", "#ef4444", "Thử lại / Lui / Mở khóa", "#991b1b");
+        } else if (cellIdx === 1) {
+            drawRiskMarker(cell.x + 278, cell.y + 64, "R2", "#f97316");
+            drawRiskMarker(cell.x + 306, cell.y + 90, "R1", "#ef4444");
+            drawRectLabel(cell.x + 188, cell.y + 126, 116, 16, "#fff7ed", "#f97316", "Bộ đếm / Cân", "#9a3412");
+        } else if (cellIdx === 2) {
+            drawRiskMarker(cell.x + 278, cell.y + 64, "R3", "#8b5cf6");
+            drawRiskMarker(cell.x + 306, cell.y + 90, "R2", "#f97316");
+            drawRectLabel(cell.x + 176, cell.y + 126, 128, 16, "#faf5ff", "#8b5cf6", "Hình ảnh / Sẵn sàng AMM", "#6b21a8");
+            drawVehicleBox(cell.x + 278, cell.y + 118, "#fb923c", "AMM");
+        } else {
+            drawRiskMarker(cell.x + 278, cell.y + 64, "R4", "#9ca3af");
+            drawRiskMarker(cell.x + 306, cell.y + 90, "R3", "#8b5cf6");
+            drawRectLabel(cell.x + 222, cell.y + 74, 82, 18, "#e0f2fe", "#0284c7", "KIỂM TRA", "#0f172a");
+            drawRectLabel(cell.x + 192, cell.y + 126, 112, 16, "#ecfeff", "#14b8a6", "Mở khóa trưởng nhóm", "#115e59");
+        }
+    });
+
+    ctx.save();
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Đường chung AGV-CTU-AMM chạy 1 chiều", roadLeft, roadY - 22);
+    ctx.fillText("Chỉ dừng ở điểm dừng | OSS theo mức rủi ro từng cụm", roadLeft, roadY - 8);
+    ctx.restore();
+
+    drawCanvasLegend([
+        { color: "#fed7aa", stroke: "#f97316", label: "Hốc dừng xe" },
+        { color: "#ede9fe", stroke: "#a855f7", label: "Vùng OSS" },
+        { color: "#fde68a", stroke: "#eab308", label: "Ô Cellcon" },
+        { color: "#bfdbfe", stroke: "#3b82f6", label: "Giá Oricon/Hancon" },
+        { color: "#dbeafe", stroke: "#60a5fa", label: "Đệm và hàng rỗng" },
+        { color: "#ef4444", stroke: "#ef4444", label: "Mốc rủi ro R1-R4" }
+    ], 540, 344, 188);
+
+    return {
+        agv: [
+            { x: roadLeft, y: roadY },
+            { x: roadRight, y: roadY }
+        ],
+        ctu: [
+            { x: roadLeft + 30, y: roadY },
+            { x: roadRight - 20, y: roadY }
+        ],
+        amm: [
+            { x: 560, y: roadY },
+            { x: 620, y: roadY },
+            { x: 620, y: 338 },
+            { x: 560, y: 338 },
+            { x: 560, y: roadY }
+        ],
+        vehicleStyle: "box",
+        vehicleOffsets: { ctu: 0.14, amm: 0.42 },
+        hideVehicleLabels: true
+    };
+}
+
+function drawScheme11() {
+    // Layout 11: 2 chuyền song song + đường giữa dùng chung + cụm Cellcon phân tán
+    const roadLeft = 98;
+    const roadRight = 734;
+    const roadTop = 206;
+    const roadBottom = 294;
+    const topLineY = 92;
+    const bottomLineY = 364;
+    const stationW = 26;
+    const stationH = 26;
+    const fuserSpacing = 31;
+    const unitSpacing = 35;
+    const fuserStartX = 118;
+    const unitStartX = 154;
+    const hubXs = [170, 314, 458, 602];
+
+    ctx.save();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Đề án C - Hai chuyền chung đường giữa + Cụm Cellcon phân tán", 28, 34);
+    ctx.restore();
+
+    drawRectLabel(20, 222, 72, 46, "#fcd34d", "#d97706", "KHO", "#78350f");
+
+    ctx.save();
+    ctx.fillStyle = "#166534";
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText("FUSER 19K", 28, 82);
+    ctx.fillStyle = "#0f766e";
+    ctx.fillText("UNIT KHÁC / CHUYỀN TƯƠNG LAI", 28, 404);
+    ctx.restore();
+
+    const roadPath = [
+        { x: roadLeft, y: roadTop },
+        { x: roadRight, y: roadTop },
+        { x: roadRight, y: roadBottom },
+        { x: roadLeft, y: roadBottom },
+        { x: roadLeft, y: roadTop }
+    ];
+    drawPath(roadPath, "#93c5fd", 24);
+    drawPath(roadPath, "#1d4ed8", 3, true);
+    drawOneWayArrowMarkers(roadPath, "#1d4ed8");
+
+    ctx.save();
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ĐƯỜNG CHUNG AGV-CTU-AMM - 1 CHIỀU", (roadLeft + roadRight) / 2, 250);
+    ctx.restore();
+
+    for (let i = 0; i < 19; i++) {
+        drawCompactStation(fuserStartX + i * fuserSpacing, topLineY, stationW, stationH, `K${i + 1}`, "#d1fae5", "#059669", "#065f46");
+    }
+
+    for (let i = 0; i < 15; i++) {
+        drawCompactStation(unitStartX + i * unitSpacing, bottomLineY, stationW, stationH, `U${i + 1}`, "#ccfbf1", "#0f766e", "#134e4a");
+    }
+
+    const hubs = [
+        { name: "Cụm A", serves: "K1-K5 / U1-U4", x: hubXs[0], y: 170, w: 124, h: 128, topDock: "Dừng FUSER", bottomDock: "Dừng UNIT" },
+        { name: "Cụm B", serves: "K6-K10 / U5-U8", x: hubXs[1], y: 170, w: 124, h: 128, topDock: "Dừng FUSER", bottomDock: "Dừng UNIT" },
+        { name: "Cụm C", serves: "K11-K15 / U9-U12", x: hubXs[2], y: 170, w: 124, h: 128, topDock: "Dừng FUSER", bottomDock: "Dừng UNIT" },
+        { name: "Cụm D", serves: "K16-K19 / U13-U15", x: hubXs[3], y: 170, w: 124, h: 128, topDock: "Dừng FUSER", bottomDock: "Dừng UNIT" }
+    ];
+
+    hubs.forEach((hub) => {
+        drawRectLabel(hub.x, 146, hub.w, 18, "#fed7aa", "#f97316", hub.topDock, "#9a3412");
+        drawDistributedCellconHub(hub);
+        drawRectLabel(hub.x, 304, hub.w, 18, "#fed7aa", "#f97316", hub.bottomDock, "#9a3412");
+
+        ctx.save();
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(hub.x + hub.w / 2, 146);
+        ctx.lineTo(hub.x + hub.w / 2, topLineY + stationH + 6);
+        ctx.moveTo(hub.x + hub.w / 2, 322);
+        ctx.lineTo(hub.x + hub.w / 2, bottomLineY - 8);
+        ctx.stroke();
+        drawArrowHead(hub.x + hub.w / 2, topLineY + stationH + 6, -Math.PI / 2, "#f97316", 6);
+        drawArrowHead(hub.x + hub.w / 2, bottomLineY - 8, Math.PI / 2, "#f97316", 6);
+        ctx.restore();
+    });
+
+    ctx.save();
+    ctx.fillStyle = "#475569";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("AMM1: ORI/HAN → Cellcon", 28, 198);
+    ctx.fillText("AMM2: Cellcon → Chuyền", 526, 340);
+    ctx.fillStyle = "#b91c1c";
+    ctx.fillText("Không dừng trên làn chính", 564, 196);
+    ctx.fillText("Chỉ dùng hốc dừng", 600, 212);
+    ctx.fillText("Đệm 1-2 chu kỳ", 600, 228);
+    ctx.restore();
+
+    drawCanvasLegend([
+        { color: "#d1fae5", stroke: "#059669", label: "Trạm FUSER" },
+        { color: "#ccfbf1", stroke: "#0f766e", label: "Trạm UNIT" },
+        { color: "#fef9c3", stroke: "#f59e0b", label: "Cụm phân tán" },
+        { color: "#facc15", stroke: "#ca8a04", label: "Ô Cellcon" },
+        { color: "#fed7aa", stroke: "#f97316", label: "Hốc dừng" }
+    ], 18, 336, 130);
+
+    drawVehicleBox(132, 250, "#fb923c", "AMM1");
+    drawVehicleBox(564, 286, "#fb923c", "AMM2");
+
+    const ammHubLoop = [
+        { x: 546, y: 286 },
+        { x: 620, y: 286 },
+        { x: 620, y: 330 },
+        { x: 546, y: 330 },
+        { x: 546, y: 286 }
+    ];
+
+    return {
+        agv: roadPath,
+        ctu: roadPath,
+        amm: ammHubLoop,
+        vehicleStyle: "box",
+        vehicleOffsets: { ctu: 0.24, amm: 0.1 },
+        hideVehicleLabels: true
+    };
+}
+
 // --- Animation Logic ---
 
 function getPointOnPath(path, progress) {
@@ -1555,7 +2374,10 @@ function loop() {
     else if (currentScheme === 5) paths = drawScheme5();
     else if (currentScheme === 6) paths = drawScheme6();
     else if (currentScheme === 7) paths = drawScheme7();
-    else paths = drawScheme8();
+    else if (currentScheme === 8) paths = drawScheme8();
+    else if (currentScheme === 9) paths = drawScheme9();
+    else if (currentScheme === 10) paths = drawScheme10();
+    else paths = drawScheme11();
 
     // Animate
     agvPos.progress += 0.002;
@@ -1564,12 +2386,26 @@ function loop() {
     ctuPos.progress += 0.003;
     if (ctuPos.progress > 1) ctuPos.progress = 0;
 
+    const ctuOffset = paths.vehicleOffsets ? paths.vehicleOffsets.ctu || 0 : 0;
+    const ammOffset = paths.vehicleOffsets ? paths.vehicleOffsets.amm || 0 : 0;
     const agvP = getPointOnPath(paths.agv, agvPos.progress);
-    const ctuP = getPointOnPath(paths.ctu, ctuPos.progress);
+    const ctuP = getPointOnPath(paths.ctu, (ctuPos.progress + ctuOffset) % 1);
 
-    // Draw Vehicles
-    drawVehicle(agvP.x, agvP.y, "#22c55e", "AGV");
-    drawVehicle(ctuP.x, ctuP.y, "#3b82f6", "CTU");
+    if (paths.amm) {
+        ammPos.progress += 0.0018;
+        if (ammPos.progress > 1) ammPos.progress = 0;
+    }
+
+    const drawVehicleFn = paths.vehicleStyle === "box" ? drawVehicleBox : drawVehicle;
+    const agvLabel = paths.hideVehicleLabels ? "" : "AGV";
+    const ctuLabel = paths.hideVehicleLabels ? "" : "CTU";
+    drawVehicleFn(agvP.x, agvP.y, "#22c55e", agvLabel);
+    drawVehicleFn(ctuP.x, ctuP.y, "#3b82f6", ctuLabel);
+
+    if (paths.amm) {
+        const ammP = getPointOnPath(paths.amm, (ammPos.progress + ammOffset) % 1);
+        drawVehicleFn(ammP.x, ammP.y, "#fb923c", paths.hideVehicleLabels ? "" : "AMM");
+    }
 
     animationId = requestAnimationFrame(loop);
 }
@@ -1635,7 +2471,7 @@ function updateMultiLine() {
 
     if (arrangement === 'tree' && lineCount > 1) {
         // 3 Columns Max. Lines fill Col 1, then Col 2...
-        // Sơ đồ cây 3 lớp.
+        // Sﾆ｡ ﾄ黛ｻ・cﾃ｢y 3 l盻孅.
         // Logic: 0,1,2 -> Col 0.
         cols = Math.ceil(lineCount / 3);
         if (cols > 3) cols = 3;
@@ -2013,7 +2849,7 @@ function drawComparisonFrame() {
 }
 
 function updateComparisonChart(currentLayout, currentAvg) {
-    const labels = ['Thẳng', 'Chữ U', 'Đối Xứng', 'Tròn', 'Chữ C', 'Vuông', 'Xương Cá', 'n-Shape'];
+    const labels = ['Thẳng', 'Chữ U', 'Đối xứng', 'Tròn', 'Chữ C', 'Vuông', 'Xương cá', 'Chữ U úp'];
     const mapIdx = {
         'straight': 0, 'u_shape': 1, 'back_to_back': 2, 'circular': 3,
         'c_shape': 4, 'square': 5, 'herringbone': 6, 'inverted_u': 7
@@ -2025,7 +2861,7 @@ function updateComparisonChart(currentLayout, currentAvg) {
     const data = {
         labels: labels,
         datasets: [{
-            label: 'Quãng đường TB (m)',
+            label: 'Quãng đường trung bình (m)',
             data: chartData,
             backgroundColor: labels.map((l, i) => i === mapIdx[currentLayout] ? '#2563eb' : '#cbd5e1'),
             borderRadius: 4
@@ -2051,13 +2887,13 @@ function updateComparisonChart(currentLayout, currentAvg) {
 document.addEventListener('DOMContentLoaded', () => {
     try {
         console.log("Simulation initializing...");
-        // alert("Lớp logic mô phỏng đang tải..."); // Temporary heartbeat
+        // alert("L盻孅 logic mﾃｴ ph盻熟g ﾄ疎ng t蘯｣i..."); // Temporary heartbeat
 
         canvas = document.getElementById('simCanvas');
         if (!canvas) throw new Error("Không tìm thấy canvas 'simCanvas'!");
 
         ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error("Không thể khởi tạo ctx 2D!");
+        if (!ctx) throw new Error("Không thể khởi tạo ngữ cảnh 2D!");
 
         // Set dimensions (responsive)
         canvas.width = canvas.offsetWidth || 800;
@@ -2083,7 +2919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setScheme(1);
         loop();
 
-        console.log("✅ Simulation ready.");
+        console.log("笨・Simulation ready.");
     } catch (e) {
         console.error("Simulation Start Error:", e);
         alert("Lỗi khởi tạo mô phỏng: " + e.message);
@@ -2092,7 +2928,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- VERIFICATION TOOLS ---
 window.verifyLayoutIntegrity = function () {
-    console.group('🔍 Layout Verification Check');
+    console.group('Kiểm tra bố cục');
     console.log(`Current Station Count: ${STATION_COUNT}`);
     console.log(`Current Scheme ID: ${currentScheme}`);
 
@@ -2102,7 +2938,7 @@ window.verifyLayoutIntegrity = function () {
     if (STATION_COUNT < 5 || STATION_COUNT > 50) errors.push("Station Count out of bounds (5-50)");
 
     // Check Schemas
-    if (Object.keys(schemes).length !== 8) errors.push("Schemes object missing entries");
+    if (Object.keys(schemes).length !== 11) errors.push("Schemes object missing entries");
 
     // Check Layout 1 Math
     if (currentScheme === 1) {
@@ -2112,12 +2948,14 @@ window.verifyLayoutIntegrity = function () {
     }
 
     if (errors.length > 0) {
-        console.error("❌ Verification Failed:", errors);
-        alert("❌ Verification Failed! Check console for details.");
+        console.error("笶・Verification Failed:", errors);
+        alert("笶・Verification Failed! Check console for details.");
     } else {
-        console.log("✅ Verification Passed: Basic integrity checks OK.");
-        alert(`✅ Verification Passed for Layout ${currentScheme} with ${STATION_COUNT} stations.`);
+        console.log("笨・Verification Passed: Basic integrity checks OK.");
+        alert(`笨・Verification Passed for Layout ${currentScheme} with ${STATION_COUNT} stations.`);
     }
     console.groupEnd();
 };
+
+
 

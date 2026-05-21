@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mô phỏng Layout Chuyền Sản Xuất Fuser</title>
+    <title>Mô phỏng bố trí chuyền sản xuất FUSER</title>
     <script src="assets/lib/tailwindcss.js"></script>
     <script src="assets/lib/chart.min.js"></script>
     <link rel="stylesheet" href="assets/css/style.css">
@@ -14,8 +14,8 @@
 
     <div class="max-w-7xl mx-auto">
         <header class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Mô phỏng 8 Đề án Layout Chuyền Fuser (<span
-                    id="header-station-count">15</span> Station)</h1>
+            <h1 class="text-3xl font-bold text-gray-900">Mô phỏng 11 đề án bố trí chuyền FUSER (<span
+                    id="header-station-count">15</span> trạm)</h1>
             <p class="text-gray-600 mt-2">Mục tiêu: Giảm diện tích, tích hợp AGV (mặt trước) và CTU (mặt sau).</p>
         </header>
 
@@ -48,10 +48,11 @@
                     <!-- Mode Selector -->
                     <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
                         <button onclick="switchMode('single')" id="btn-mode-single"
-                            class="flex-1 py-2 text-xs font-bold rounded-md bg-white shadow text-blue-700 transition-all">Single
-                            Line</button>
+                            class="flex-1 py-2 text-xs font-bold rounded-md bg-white shadow text-blue-700 transition-all">Một
+                            chuyền</button>
                         <button onclick="switchMode('multi')" id="btn-mode-multi"
-                            class="flex-1 py-2 text-xs font-bold rounded-md text-gray-500 hover:bg-gray-200 transition-all">Multi-Line</button>
+                            class="flex-1 py-2 text-xs font-bold rounded-md text-gray-500 hover:bg-gray-200 transition-all">Nhiều
+                            chuyền</button>
                         <button onclick="switchMode('algorithms')" id="btn-mode-algorithms"
                             class="flex-1 py-2 text-xs font-bold rounded-md text-gray-500 hover:bg-gray-200 transition-all">📚
                             Thuật Toán</button>
@@ -82,15 +83,27 @@
                             </button>
                             <button onclick="setScheme(6)" id="btn-6"
                                 class="btn-tab px-4 py-3 text-left rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-900 font-medium ring-1 ring-yellow-300">
-                                6. Layout Vuông (Square Loop)
+                                6. Layout Vuông (Vòng vuông)
                             </button>
                             <button onclick="setScheme(7)" id="btn-7"
                                 class="btn-tab px-4 py-3 text-left rounded-lg bg-green-100 hover:bg-green-200 text-green-900 font-medium ring-1 ring-green-300">
-                                🏆 7. Layout Xương Cá (Herringbone)
+                                🏆 7. Layout Xương Cá
                             </button>
                             <button onclick="setScheme(8)" id="btn-8"
                                 class="btn-tab px-4 py-3 text-left rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-900 font-medium ring-1 ring-orange-300">
-                                8. Layout Chữ U Úp (n-Shape)
+                                8. Layout Chữ U Úp
+                            </button>
+                            <button onclick="setScheme(9)" id="btn-9"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-cyan-100 hover:bg-cyan-200 text-cyan-900 font-medium ring-1 ring-cyan-300">
+                                9. Đề án A - FUSER 19K Vòng 1 chiều + 4 điểm dừng + OSS
+                            </button>
+                            <button onclick="setScheme(10)" id="btn-10"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-900 font-medium ring-1 ring-rose-300">
+                                10. Đề án B - Bố trí 4 cụm cấp phát + OSS theo rủi ro
+                            </button>
+                            <button onclick="setScheme(11)" id="btn-11"
+                                class="btn-tab px-4 py-3 text-left rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-medium ring-1 ring-emerald-300">
+                                11. Đề án C - Hai chuyền chung đường giữa + Cụm Cellcon phân tán
                             </button>
                         </div>
                     </div> <!-- End Single Line Controls -->
@@ -104,28 +117,28 @@
 
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng Line
-                                (Multi-mode):</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng chuyền
+                                (chế độ nhiều chuyền):</label>
                             <select id="cfg-line-count" class="w-full p-2 border rounded bg-slate-50 font-bold"
                                 onchange="updateMultiLine()">
-                                <option value="1">1 Line</option>
-                                <option value="2">2 Lines</option>
-                                <option value="3" selected>3 Lines</option>
-                                <option value="4">4 Lines</option>
-                                <option value="5">5 Lines</option>
-                                <option value="6">6 Lines</option>
-                                <option value="7">7 Lines</option>
-                                <option value="8">8 Lines</option>
-                                <option value="9">9 Lines</option>
+                                <option value="1">1 chuyền</option>
+                                <option value="2">2 chuyền</option>
+                                <option value="3" selected>3 chuyền</option>
+                                <option value="4">4 chuyền</option>
+                                <option value="5">5 chuyền</option>
+                                <option value="6">6 chuyền</option>
+                                <option value="7">7 chuyền</option>
+                                <option value="8">8 chuyền</option>
+                                <option value="9">9 chuyền</option>
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cách bố trí Line:</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cách bố trí chuyền:</label>
                             <select id="cfg-arrangement" class="w-full p-2 border rounded bg-slate-50 font-medium"
                                 onchange="updateMultiLine()">
-                                <option value="vertical">Dọc 1 cột (Vertical Stack)</option>
-                                <option value="tree">Sơ đồ cây (3 Cột/Lớp)</option>
+                                <option value="vertical">Dọc 1 cột</option>
+                                <option value="tree">Sơ đồ cây (3 cột / lớp)</option>
                             </select>
                         </div>
 
@@ -133,19 +146,19 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Hình thái Layout:</label>
                             <select id="cfg-layout-type" class="w-full p-2 border rounded bg-slate-50 font-medium"
                                 onchange="updateMultiLine()">
-                                <option value="straight">Layout 1: Thẳng (Straight)</option>
-                                <option value="u_shape">Layout 2: Chữ U (U-Shape)</option>
-                                <option value="back_to_back">Layout 3: Đối Xứng (Back-to-Back)</option>
-                                <option value="circular">Layout 4: Đấu Trường (Circular)</option>
-                                <option value="c_shape">Layout 5: Chữ C (C-Shape)</option>
-                                <option value="square">Layout 6: Vuông (Square)</option>
-                                <option value="herringbone">Layout 7: Xương Cá (Herringbone)</option>
-                                <option value="inverted_u">Layout 8: Chữ U Úp (n-Shape)</option>
+                                <option value="straight">Layout 1: Thẳng</option>
+                                <option value="u_shape">Layout 2: Chữ U</option>
+                                <option value="back_to_back">Layout 3: Đối xứng</option>
+                                <option value="circular">Layout 4: Đấu trường</option>
+                                <option value="c_shape">Layout 5: Chữ C</option>
+                                <option value="square">Layout 6: Vuông</option>
+                                <option value="herringbone">Layout 7: Xương cá</option>
+                                <option value="inverted_u">Layout 8: Chữ U úp</option>
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách Line (m):</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách chuyền (m):</label>
                             <input type="range" id="cfg-line-spacing" min="2" max="10" value="4" step="0.5"
                                 class="w-full" oninput="updateMultiLine()">
                             <div class="text-right text-xs font-bold text-blue-600" id="disp-spacing">4m</div>
@@ -153,7 +166,7 @@
 
                         <!-- NEW: Warehouse Distance Input -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách Kho - Line
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khoảng cách Kho - chuyền
                                 (m):</label>
                             <input type="range" id="cfg-wh-dist" min="5" max="100" value="20" step="1" class="w-full"
                                 oninput="updateMultiLine()">
@@ -314,7 +327,7 @@
                         <div class="mb-4 border border-purple-200 rounded-lg overflow-hidden">
                             <button onclick="toggleAlgoCard('loop')"
                                 class="w-full p-3 bg-purple-50 text-left font-semibold text-purple-800 flex justify-between items-center hover:bg-purple-100 transition-colors">
-                                <span>🔄 Loop (Vòng lặp cố định)</span>
+                                <span>🔄 Vòng lặp cố định</span>
                                 <span id="loop-icon" class="text-lg">+</span>
                             </button>
                             <div id="loop-details" class="hidden p-4 bg-white text-sm">
@@ -481,7 +494,7 @@
                     <div class="mt-4 pt-4 border-t border-gray-100">
                         <button onclick="verifyLayoutIntegrity()"
                             class="text-xs text-gray-400 hover:text-red-500 underline">
-                            🛠️ Run Layout Verification
+                            🛠️ Kiểm tra bố cục
                         </button>
                     </div>
                 </div>
