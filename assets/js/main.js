@@ -1,4 +1,4 @@
-﻿console.log("main.js script file loaded.");
+console.log("main.js script file loaded.");
 // --- Global Variables & Constants ---
 let canvas, ctx;
 let STATION_COUNT = 19;
@@ -241,7 +241,7 @@ schemes[9] = {
     dims: "17.8m x 10.8m",
     area: "192.2",
     areaNote: "Hốc dừng được tách khỏi làn chính để giữ dòng xe 1 chiều liên tục quanh chuyền.",
-    image: "layout9_ref.svg",
+    image: "assets/reference/layout9_reference_main.png",
     formula: "Bố trí cố định 19K dạng vòng 1 chiều với 4 điểm dừng tách khỏi làn chính.",
     metrics: [
         ["Số K", "19"],
@@ -275,7 +275,7 @@ schemes[10] = {
     dims: "18.2m x 11.4m",
     area: "207.5",
     areaNote: "Bố trí này tập trung vào cụm vận hành và kiểm soát rủi ro hơn là chỉ tối ưu hình học.",
-    image: "layout10_ref.svg",
+    image: "assets/reference/layout10_reference_main.png",
     formula: "4 cụm cấp phát + 4 điểm dừng + OSS theo rủi ro + vùng đệm và hàng rỗng cho từng cụm.",
     metrics: [
         ["Số K", "19"],
@@ -309,7 +309,7 @@ schemes[11] = {
     dims: "20.4m x 11.8m",
     area: "240.7",
     areaNote: "Bố trí 2 chuyền song song với đường giữa dùng chung giúp nén diện tích dài hạn tốt hơn nhưng đổi lại cần luật điều phối rõ ràng.",
-    image: "layout11_ref.svg",
+    image: "assets/reference/layout11_reference_main.png",
     formula: "2 chuyền song song + 1 đường giữa 1 chiều + 4 cụm Cellcon phân tán, mỗi cụm có hốc dừng trên / dưới riêng.",
     metrics: [
         ["Số chuyền", "2"],
@@ -480,6 +480,18 @@ function setScheme(id) {
 
     // Update Reference Image
     document.getElementById('ref-image').src = info.image || 'layout1_ref.png';
+    const captionEl = document.getElementById('ref-image-caption');
+    if (captionEl) {
+        if (id === 9) {
+            captionEl.textContent = "Minh họa concept Đề án A: FUSER loop 1 chiều, 4 dock cấp phát, OSS và Cellcon theo cụm.";
+        } else if (id === 10) {
+            captionEl.textContent = "Minh họa concept Đề án B: 4 cell cấp phát, OSS theo mức rủi ro, Oricon/Hancon/Cellcon tách vùng.";
+        } else if (id === 11) {
+            captionEl.textContent = "Minh họa concept Đề án C: hai chuyền dùng chung đường giữa, Cellcon hub phân tán, pocket hai bên.";
+        } else {
+            captionEl.textContent = "Hình ảnh minh họa ý tưởng layout trong thực tế";
+        }
+    }
 
     // Show/Hide 3D Button for layouts that have dedicated 3D pages
     const view3dContainer = document.getElementById('view-3d-container');
@@ -841,59 +853,116 @@ function drawLayout9Station(x, y, label, rotation = 0) {
         ctx.rotate(rotation);
         ctx.translate(-(x + STATION_W / 2), -(y + STATION_H / 2));
     }
-    ctx.fillStyle = "#d1fae5";
-    ctx.strokeStyle = "#059669";
+    // 1. Khung station (xanh lá nhạt, viền đậm)
+    ctx.fillStyle = "#e2f0d9"; // Light green
+    ctx.strokeStyle = "#385723"; // Dark green border
     ctx.lineWidth = 1.5;
     drawRoundedRectPath(x, y, STATION_W, STATION_H, 6);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#e5e7eb";
-    ctx.fillRect(x + 4, y + 4, STATION_W - 8, 11);
+
+    // 2. Bàn thao tác / workbench (xám nhạt)
+    ctx.fillStyle = "#f3f4f6";
     ctx.strokeStyle = "#9ca3af";
-    ctx.strokeRect(x + 4, y + 4, STATION_W - 8, 11);
-    ctx.fillStyle = "#6ee7b7";
-    ctx.fillRect(x + 4, y + 18, STATION_W - 8, STATION_H - 22);
+    ctx.lineWidth = 1;
+    ctx.fillRect(x + 4, y + 4, STATION_W - 8, 12);
+    ctx.strokeRect(x + 4, y + 4, STATION_W - 8, 12);
+
+    // 3. Người thao tác / operator (icon tròn xanh cyan/teal)
+    ctx.fillStyle = "#06b6d4";
+    ctx.strokeStyle = "#0891b2";
+    ctx.beginPath();
+    ctx.arc(x + STATION_W / 2, y + STATION_H - 8, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 4. Vùng nhận linh kiện nhỏ (màu tím/cyan)
+    ctx.fillStyle = "#c7d2fe"; // Indigo-200
+    ctx.fillRect(x + 5, y + 20, 6, 6);
+
+    // 5. Khay/Tray Cellcon (vàng)
+    ctx.fillStyle = "#facc15";
+    ctx.fillRect(x + STATION_W - 11, y + 20, 6, 6);
+
+    // 6. Label K (bold green text)
     ctx.fillStyle = "#065f46";
-    ctx.font = "bold 10px sans-serif";
+    ctx.font = "bold 8px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, x + STATION_W / 2, y + STATION_H / 2 + 2);
+    ctx.fillText(label, x + STATION_W / 2, y + 10);
     ctx.restore();
 }
 
 function drawCompactStation(x, y, w, h, label, fill, stroke, textColor = "#0f172a") {
     ctx.save();
+    // 1. Khung station
     ctx.fillStyle = fill;
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.4;
-    drawRoundedRectPath(x, y, w, h, 5);
+    ctx.lineWidth = 1.2;
+    drawRoundedRectPath(x, y, w, h, 4);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillRect(x + 3, y + 3, w - 6, 8);
+
+    // 2. Bàn thao tác / workbench
+    ctx.fillStyle = "#f3f4f6";
+    ctx.fillRect(x + 2, y + 2, w - 4, 8);
+
+    // 3. Người thao tác / operator (icon tròn xanh)
+    ctx.fillStyle = "#06b6d4";
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + h - 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Label
     ctx.fillStyle = textColor;
-    ctx.font = "bold 9px sans-serif";
+    ctx.font = "bold 7px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+    ctx.fillText(label, x + w / 2, y + 6);
     ctx.restore();
 }
 
 function drawDockCluster(cfg) {
     const { x, y, w, h, dockLabel, clusterLabel } = cfg;
-    drawRectLabel(x, y, w, h, "#fed7aa", "#f97316", dockLabel, "#9a3412");
+    
+    // 1. Pocket/hốc dừng lệch làn chính (cam nhạt, viền nét đứt cam đậm)
     ctx.save();
-    ctx.fillStyle = "#9a3412";
-    ctx.font = "bold 10px sans-serif";
+    ctx.fillStyle = "#fff7ed"; // Orange-50
+    ctx.strokeStyle = "#ea580c"; // Orange-600
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    drawRoundedRectPath(x, y, w, h, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    ctx.save();
+    // Tiêu đề hốc dừng
+    ctx.fillStyle = "#c2410c";
+    ctx.font = "bold 9px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(clusterLabel, x + 8, y + 14);
-    drawRectLabel(x + 8, y + 24, 52, 18, "#e9d5ff", "#a855f7", "OSS", "#6b21a8");
-    drawRectLabel(x + 68, y + 24, 40, 18, "#dbeafe", "#60a5fa", "ĐỆM", "#1d4ed8");
-    drawRectLabel(x + 116, y + 24, 50, 18, "#cbd5e1", "#64748b", "RỖNG", "#334155");
+    ctx.textBaseline = "top";
+    ctx.fillText(`${dockLabel} (${clusterLabel})`, x + 8, y + 6);
+
+    // Hàng trên: OSS, ĐỆM, RỖNG
+    // OSS (Tím nhạt)
+    drawRectLabel(x + 8, y + 18, 48, 16, "#f3e8ff", "#a855f7", "OSS", "#6b21a8");
+    // ĐỆM/Buffer (Xanh mint)
+    drawRectLabel(x + 60, y + 18, 44, 16, "#d1fae5", "#059669", "ĐỆM", "#065f46");
+    // RỖNG/Empty return (Xám)
+    drawRectLabel(x + 108, y + 18, 50, 16, "#f3f4f6", "#6b7280", "Rỗng", "#374151");
+
+    // Hàng dưới: Ô Cellcon, ORI/HAN
+    // 5 ô Cellcon (vàng)
     for (let i = 0; i < 5; i++) {
-        drawRectLabel(x + 8 + i * 18, y + 50, 14, 14, "#fde68a", "#eab308", "");
+        drawRectLabel(x + 8 + i * 14, y + 38, 11, 11, "#fef9c3", "#ca8a04", "");
     }
-    drawRectLabel(x + 108, y + 50, 58, 14, "#bfdbfe", "#3b82f6", "ORI/HAN", "#1e3a8a");
+    // ORI rack (xanh dương nhạt)
+    drawRectLabel(x + 82, y + 38, 38, 16, "#dbeafe", "#3b82f6", "ORI", "#1e40af");
+    // HAN rack (cyan nhạt)
+    drawRectLabel(x + 124, y + 38, 34, 16, "#ecfeff", "#06b6d4", "HAN", "#0891b2");
+
     ctx.restore();
 }
 
@@ -904,42 +973,51 @@ function drawDistributedCellconHub(cfg) {
     const smallGap = 6;
     const smallW = Math.floor((innerW - smallGap * 2) / 3);
     ctx.save();
-    ctx.fillStyle = "#fef9c3";
-    ctx.strokeStyle = "#f59e0b";
+    // Khung Hub phân tán (vàng cam nhạt)
+    ctx.fillStyle = "#fffbeb";
+    ctx.strokeStyle = "#d97706";
     ctx.lineWidth = 1.6;
     drawRoundedRectPath(x, y, w, h, 12);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#92400e";
+    // Tiêu đề
+    ctx.fillStyle = "#78350f";
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(name, x + w / 2, y + 14);
-    ctx.font = "9px sans-serif";
-    ctx.fillStyle = "#6b7280";
-    ctx.fillText(serves, x + w / 2, y + 28);
+    ctx.textBaseline = "top";
+    ctx.fillText(name, x + w / 2, y + 8);
+    ctx.font = "8px sans-serif";
+    ctx.fillStyle = "#4b5563";
+    ctx.fillText(serves, x + w / 2, y + 22);
 
-    drawRectLabel(innerX, y + 38, innerW, 16, "#bfdbfe", "#60a5fa", "Đầu vào ORI/HAN", "#1e3a8a");
-    drawRectLabel(innerX, y + 60, smallW, 16, "#ede9fe", "#a855f7", "OSS", "#6b21a8");
-    drawRectLabel(innerX + smallW + smallGap, y + 60, smallW, 16, "#dbeafe", "#60a5fa", "ĐỆM", "#1d4ed8");
-    drawRectLabel(innerX + (smallW + smallGap) * 2, y + 60, smallW, 16, "#d1d5db", "#6b7280", "RỖNG", "#374151");
+    // Giá đầu vào ORI/HAN
+    drawRectLabel(innerX, y + 34, innerW, 16, "#dbeafe", "#3b82f6", "Đầu vào ORI/HAN", "#1e40af");
 
+    // Racks: OSS, ĐỆM, RỖNG
+    drawRectLabel(innerX, y + 54, smallW, 16, "#f3e8ff", "#a855f7", "OSS", "#6b21a8");
+    drawRectLabel(innerX + smallW + smallGap, y + 54, smallW, 16, "#d1fae5", "#059669", "ĐỆM", "#065f46");
+    drawRectLabel(innerX + (smallW + smallGap) * 2, y + 54, smallW, 16, "#f3f4f6", "#6b7280", "Rỗng", "#374151");
+
+    // Ô Cellcon (vàng)
     for (let i = 0; i < 6; i++) {
-        drawRectLabel(innerX + i * 18, y + 84, 14, 14, "#facc15", "#ca8a04", "");
+        drawRectLabel(innerX + i * 18, y + 74, 13, 13, "#fef9c3", "#ca8a04", "");
     }
 
-    ctx.strokeStyle = "#f97316";
-    ctx.lineWidth = 1.6;
+    // Mũi tên luồng
+    ctx.strokeStyle = "#ea580c";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(innerX + 4, y + 108);
-    ctx.lineTo(x + w - 12, y + 108);
+    ctx.moveTo(innerX + 4, y + 96);
+    ctx.lineTo(x + w - 12, y + 96);
     ctx.stroke();
-    drawArrowHead(x + w - 16, y + 108, 0, "#f97316", 6);
+    drawArrowHead(x + w - 16, y + 96, 0, "#ea580c", 6);
 
-    ctx.fillStyle = "#f97316";
+    ctx.fillStyle = "#ea580c";
     ctx.font = "bold 8px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("ORI/HAN → Cellcon → Chuyền", x + w / 2, y + 122);
+    ctx.fillText("ORI/HAN → Cellcon → Line", x + w / 2, y + 108);
+    
     ctx.restore();
 }
 

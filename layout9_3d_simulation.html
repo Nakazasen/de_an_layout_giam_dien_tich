@@ -119,6 +119,87 @@
             parent.add(nhan);
         }
 
+                function taoTramModule3D(w, h, d, colorHex = 0xe2f0d9) {
+            const grp = new THREE.Group();
+            
+            // 1. Base / Cabinet (Light Green / Custom Color)
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(w, 0.4, d),
+                new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.6 })
+            );
+            base.position.y = 0.2;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            grp.add(base);
+
+            // 2. Workbench (Gray tabletop)
+            const wb = new THREE.Mesh(
+                new THREE.BoxGeometry(w - 0.1, 0.45, d * 0.45),
+                new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.4 })
+            );
+            wb.position.set(0, 0.625, -d * 0.22);
+            wb.castShadow = true;
+            wb.receiveShadow = true;
+            grp.add(wb);
+
+            // 3. Worker / Operator (Cyan cylinder)
+            const op = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.16, 0.16, 1.1, 16),
+                new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3 })
+            );
+            op.position.set(0, 0.75, d * 0.25);
+            op.castShadow = true;
+            grp.add(op);
+
+            // 4. Tiny bins (one indigo, one yellow) on table
+            const bin1 = new THREE.Mesh(
+                new THREE.BoxGeometry(0.22, 0.12, 0.22),
+                new THREE.MeshStandardMaterial({ color: 0xc7d2fe })
+            );
+            bin1.position.set(-w * 0.25, 0.9, -d * 0.2);
+            grp.add(bin1);
+
+            const bin2 = new THREE.Mesh(
+                new THREE.BoxGeometry(0.22, 0.12, 0.22),
+                new THREE.MeshStandardMaterial({ color: 0xfacc15 })
+            );
+            bin2.position.set(w * 0.25, 0.9, -d * 0.2);
+            grp.add(bin2);
+
+            return grp;
+        }
+
+        function taoAGV3D(colorHex) {
+            const grp = new THREE.Group();
+            
+            // Chassis
+            const chassis = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 0.16, 0.9),
+                new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 })
+            );
+            chassis.position.y = 0.08;
+            grp.add(chassis);
+
+            // Main Body
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(1.0, 0.45, 0.8),
+                new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.5 })
+            );
+            body.position.y = 0.385;
+            body.castShadow = true;
+            grp.add(body);
+
+            // Blinking light sphere
+            const light = new THREE.Mesh(
+                new THREE.SphereGeometry(0.12, 12, 12),
+                new THREE.MeshStandardMaterial({ color: 0xfaff00, emissive: 0xffa000, emissiveIntensity: 0.6 })
+            );
+            light.position.set(0.3, 0.68, 0);
+            grp.add(light);
+
+            return grp;
+        }
+
         const kho = taoHop(4.8, 3.4, 4.4, 0xfacc15);
         kho.position.set(-17, 1.7, -12);
         scene.add(kho);
@@ -150,8 +231,8 @@
 
         const cumTram = new THREE.Group();
         viTriTram.forEach((p, idx) => {
-            const tram = taoHop(1.5, 1.2, 1.2, 0x6ee7b7);
-            tram.position.set(p.x, 0.65, p.z);
+            const tram = taoTramModule3D(1.5, 1.2, 1.2, 0xe2f0d9);
+            tram.position.set(p.x, 0, p.z);
             tram.rotation.y = p.goc;
             cumTram.add(tram);
             if (idx < 3 || idx === 9 || idx > 15) {
@@ -210,9 +291,9 @@
         scene.add(camDung);
         datNhan(scene, "KHÔNG DỪNG TẠI CUA K10", 13.2, 4.1, 0, "rgba(254,242,242,0.96)", "#b91c1c");
 
-        const agv = taoHop(1.1, 0.8, 0.9, 0x22c55e);
-        const ctu = taoHop(1.1, 0.8, 0.9, 0x3b82f6);
-        const amm = taoHop(1.0, 0.8, 0.9, 0xfb923c);
+        const agv = taoAGV3D(0x22c55e);
+        const ctu = taoAGV3D(0x3b82f6);
+        const amm = taoAGV3D(0xfb923c);
         scene.add(agv, ctu, amm);
         datNhan(agv, "AGV", 0, 1.0, 0, "rgba(236,253,245,0.96)", "#166534");
         datNhan(ctu, "CTU", 0, 1.0, 0, "rgba(219,234,254,0.96)", "#1e40af");
